@@ -10,7 +10,9 @@ const firebaseConfig = {
   appId: "1:681004488105:web:530cb3f50e0980a19420b8"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
 const auth = firebase.auth();
 
@@ -23,6 +25,7 @@ const ADMIN_EMAILS = [
 
 // ESTADOS GLOBAIS
 let products = [];
+let draftProducts = []; // <-- Estado Novo Adicionado para Rascunhos!
 let orders = [];
 let pdvCart = [];
 let editingId = null;
@@ -32,19 +35,16 @@ let igExtractedData = null;
 let igImageBase64 = null;
 
 // ==========================================
-// AUTENTICAÇÃO — GUARD DO ADMIN
+// AUTENTICAÇÃO — GUARD DO ADMIN (MANTIDO INTACTO)
 // ==========================================
 auth.onAuthStateChanged((user) => {
   if (user && ADMIN_EMAILS.includes(user.email)) {
-    // Usuário autenticado e é admin — esconde o guard
     document.getElementById('authGuard').style.display = 'none';
     initApp();
   } else if (user) {
-    // Logado mas NÃO é admin
     showGuardError('Esta conta não tem acesso ao painel administrativo.');
     auth.signOut();
   } else {
-    // Não logado — mantém o guard visível
     document.getElementById('authGuard').style.display = 'flex';
   }
 });
@@ -67,7 +67,6 @@ function guardLogin() {
         btn.textContent = 'ENTRAR';
         btn.style.opacity = '1';
       }
-      // onAuthStateChanged vai tratar o sucesso
     })
     .catch((err) => {
       showGuardError('E-mail ou senha incorretos. Tente novamente.');
@@ -89,12 +88,19 @@ function adminLogout() {
 }
 
 // ==========================================
-// INIT — só roda após autenticação confirmada
+// INIT E BANCO DE DADOS (ATUALIZADO PARA DRAFTS)
 // ==========================================
 function initApp() {
   db.collection("products").onSnapshot((snapshot) => {
-    products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Separa os produtos reais dos rascunhos da Automação Make
+    products = allProducts.filter(p => p.status !== 'rascunho');
+    draftProducts = allProducts.filter(p => p.status === 'rascunho');
+
     renderProdTable();
+    renderDraftTable(); // <-- Renderiza a tabela de rascunhos
+    updateDraftBadge(); // <-- Atualiza o sininho de notificação
     renderPDVGrid();
     renderEstoque();
     updateAiSelect();
@@ -115,7 +121,7 @@ function initApp() {
 }
 
 // ==========================================
-// UTILITÁRIO DE IMAGEM
+// UTILITÁRIO DE IMAGEM (MANTIDO INTACTO)
 // ==========================================
 function handleImageUpload(file, base64FieldId, previewId, callback) {
   if (!file) return;
@@ -155,12 +161,26 @@ function showPage(name, el) {
     dashboard: 'Dashboard',
     pdv: 'Frente de Caixa (PDV)',
     pedidos: 'Gestão de Pedidos',
-    produtos: 'Produtos',
+    produtos: 'Produtos Ativos',
+    importados: 'Rascunhos do Make',
     estoque: 'Controle de Estoque',
     instagram: '📸 Instagram → Site',
     ia: 'Gerador de Marketing IA'
   };
   document.getElementById('pageTitle').textContent = titles[name] || name;
+}
+
+function updateDraftBadge() {
+  const badge = document.getElementById('badgeInsta');
+  const mainDot = document.getElementById('mainNotifDot');
+  if(draftProducts.length > 0) {
+    badge.textContent = draftProducts.length;
+    badge.style.display = 'inline-block';
+    mainDot.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+    mainDot.style.display = 'none';
+  }
 }
 
 // ==========================================
@@ -191,12 +211,35 @@ function renderProdTable() {
   `).join('');
 }
 
+// ROTA 1: RENDERIZA OS RASCUNHOS IMPORTADOS
+function renderDraftTable() {
+  const tbody = document.getElementById('draftTableBody');
+  if(draftProducts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text2)">Nenhum produto importado pendente.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = draftProducts.map(p => `
+    <tr>
+      <td><img src="${p.img || ''}" style="width:40px;height:50px;object-fit:cover;border-radius:4px; border:2px solid var(--rose);"></td>
+      <td><strong>${p.name}</strong><br><small style="color:var(--text2)">Via Make.com</small></td>
+      <td>R$ ${(p.price||0).toFixed(2).replace('.',',')}</td>
+      <td><span class="status-badge rascunho">Sem Estoque</span></td>
+      <td style="display:flex;gap:6px;padding:14px 16px">
+        <button class="btn btn-gold btn-sm" onclick="activateDraft('${p.id}')">Adicionar Estoque e Ativar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Descartar</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
 function filterProdTable() { renderProdTable(); }
 
-function openProductForm(id = null) {
+function openProductForm(id = null, isDraft = false) {
   editingId = id;
-  const p = id ? products.find(x => x.id === id) : null;
-  document.getElementById('prodModalTitle').textContent = p ? 'Editar Produto' : 'Novo Produto';
+  // Identifica se vai editar um produto pronto ou ativar um rascunho
+  const p = id ? (isDraft ? draftProducts.find(x=>x.id===id) : products.find(x=>x.id===id)) : null;
+  
+  document.getElementById('prodModalTitle').textContent = p ? (isDraft ? 'Ativar Importado do Instagram' : 'Editar Produto') : 'Novo Produto';
   document.getElementById('fNome').value = p?.name || '';
   document.getElementById('fCat').value = p?.category || 'vestidos';
   document.getElementById('fCusto').value = p?.cost || '';
@@ -215,23 +258,29 @@ function openProductForm(id = null) {
 
 function closeProdModal() { document.getElementById('prodModal').classList.remove('show'); }
 
+function activateDraft(id) { openProductForm(id, true); }
+
 async function saveProduct() {
   const name = document.getElementById('fNome').value.trim();
+  const stock = parseInt(document.getElementById('fEstoque').value) || 0;
   if (!name) return alert("Nome é obrigatório.");
+  
   const data = {
     name,
     category: document.getElementById('fCat').value,
     cost: parseFloat(document.getElementById('fCusto').value) || 0,
     price: parseFloat(document.getElementById('fPreco').value) || 0,
-    stock: parseInt(document.getElementById('fEstoque').value) || 0,
+    stock: stock,
     sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()),
     desc: document.getElementById('fDesc').value,
     img: document.getElementById('fImgBase64').value,
     channelSite: document.getElementById('fChanSite').checked,
     channelShopee: document.getElementById('fChanShopee').checked,
     channelPdv: true,
-    active: true
+    active: true,
+    status: 'ativo' // Se salvar, ele sai de "rascunho"
   };
+  
   try {
     document.getElementById('btnSalvarProd').textContent = "Salvando...";
     if (editingId) {
@@ -251,10 +300,10 @@ async function saveProduct() {
   }
 }
 
-function editProduct(id) { openProductForm(id); }
+function editProduct(id) { openProductForm(id, false); }
 
 async function deleteProduct(id) {
-  if (confirm("Tem certeza que deseja excluir este produto?")) {
+  if (confirm("Tem certeza que deseja excluir?")) {
     await db.collection("products").doc(id).delete();
   }
 }
@@ -445,7 +494,7 @@ async function saveStockEntry() {
 }
 
 // ==========================================
-// 📸 INSTAGRAM → PRODUTO (AUTOMAÇÃO COM IA)
+// 📸 INSTAGRAM → PRODUTO (AUTOMAÇÃO CLAUDE - MANTIDA INTACTA)
 // ==========================================
 function previewIgImage(event) {
   const file = event.target.files[0];
@@ -564,7 +613,8 @@ async function publishIgProduct() {
     channelShopee: false,
     channelPdv: true,
     active: true,
-    origem: 'instagram'
+    origem: 'instagram',
+    status: 'ativo'
   };
 
   try {
@@ -601,7 +651,7 @@ function resetIg() {
 }
 
 // ==========================================
-// 🤖 IA MARKETING
+// 🤖 IA MARKETING (MANTIDA INTACTA)
 // ==========================================
 function updateAiSelect() {
   const sel = document.getElementById('aiProdSelect');
