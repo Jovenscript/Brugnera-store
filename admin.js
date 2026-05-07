@@ -16,13 +16,9 @@ const auth = firebase.auth();
 
 // ==========================================
 // EMAILS AUTORIZADOS COMO ADMIN
-// (adicione o email da dona aqui)
 // ==========================================
 const ADMIN_EMAILS = [
-  'admin@brugnera.com',
-  'caroline@brugnera.com',
-  'brugnera@brugnera.com',
-  // adicione outros emails admin aqui
+  'admin@brugnerastore.com.br'
 ];
 
 // ESTADOS GLOBAIS
@@ -473,7 +469,6 @@ async function analyzeInstagram() {
   document.getElementById('igStep2').style.display = 'none';
 
   try {
-    // Montar mensagem para a IA
     const userContent = [];
 
     if (igImageBase64) {
@@ -525,13 +520,11 @@ Regras:
     const data = await response.json();
     const rawText = data.content.map(b => b.text || '').join('').trim();
 
-    // Extrair JSON
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('Resposta da IA inválida');
 
     igExtractedData = JSON.parse(jsonMatch[0]);
 
-    // Preencher formulário
     document.getElementById('igFNome').value = igExtractedData.nome || '';
     document.getElementById('igFCat').value = igExtractedData.categoria || 'vestidos';
     document.getElementById('igFPreco').value = igExtractedData.preco || '';
@@ -576,7 +569,7 @@ async function publishIgProduct() {
 
   try {
     const btn = document.querySelector('#pageInstagram .btn-gold');
-    btn.textContent = 'Publicando...';
+    if (btn) btn.textContent = 'Publicando...';
     await db.collection("products").add(data);
 
     if (estoque > 0) {
@@ -608,7 +601,7 @@ function resetIg() {
 }
 
 // ==========================================
-// 🤖 IA MARKETING (com Claude API real)
+// 🤖 IA MARKETING
 // ==========================================
 function updateAiSelect() {
   const sel = document.getElementById('aiProdSelect');
