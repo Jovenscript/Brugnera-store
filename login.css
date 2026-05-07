@@ -57,7 +57,6 @@ body {
   text-transform: uppercase; 
 }
 
-/* CAIXA DE ERRO INSPIRADA NO SEU PRINT */
 .error-box { 
   display: none; 
   background: rgba(212,133,122,0.15); 
