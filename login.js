@@ -1,4 +1,6 @@
-// CONECTA AO FIREBASE
+// ==========================================
+// CONFIGURAÇÃO DO FIREBASE
+// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyBmIo1X0u1SVICd0m1npIv8oFAxMgnhsGE",
   authDomain: "brugnerastore.firebaseapp.com",
@@ -8,13 +10,27 @@ const firebaseConfig = {
   appId: "1:681004488105:web:530cb3f50e0980a19420b8"
 };
 
+// Iniciar Firebase com segurança
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const auth = firebase.auth();
 
-// ALTERNAR ENTRE LOGIN E CADASTRO
+// ==========================================
+// FUNÇÕES DE TELA (MENSAGENS)
+// ==========================================
+function mostrarErro(msg) {
+  const box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.textContent = msg;
+}
+
+function ocultarErro() {
+  document.getElementById('errorBox').style.display = 'none';
+}
+
 function trocarFormulario() {
+  ocultarErro();
   const loginForm = document.getElementById('loginForm');
   const regForm = document.getElementById('registerForm');
   
@@ -27,48 +43,57 @@ function trocarFormulario() {
   }
 }
 
+// ==========================================
 // FAZER CADASTRO
+// ==========================================
 function fazerCadastro() {
-  const email = document.getElementById('emailCadastro').value;
+  ocultarErro();
+  const email = document.getElementById('emailCadastro').value.trim().toLowerCase();
   const senha = document.getElementById('senhaCadastro').value;
   const btn = document.getElementById('btnCadastrar');
 
-  if(!email || !senha) return alert('Preencha todos os campos!');
+  if(!email || !senha) return mostrarErro('Por favor, preencha todos os campos!');
 
-  btn.textContent = 'Aguarde...';
+  btn.textContent = 'AGUARDE...';
   
   auth.createUserWithEmailAndPassword(email, senha)
     .then((userCredential) => {
-      alert('Conta criada com sucesso! Bem-vinda à Brugnera Store.');
-      window.location.href = 'index.html'; // Manda pro site
+      // Assim que cria a conta, joga pro site normal
+      window.location.href = 'index.html'; 
     })
     .catch((error) => {
-      alert('Erro ao criar conta: ' + error.message);
-      btn.textContent = 'Cadastrar';
+      mostrarErro('Erro ao criar conta: verifique se o e-mail é válido.');
+      btn.textContent = 'CADASTRAR';
     });
 }
 
+// ==========================================
 // FAZER LOGIN
+// ==========================================
 function fazerLogin() {
-  const email = document.getElementById('emailLogin').value;
+  ocultarErro();
+  
+  // Limpa o email de espaços extras e letras maiúsculas que dão erro
+  const email = document.getElementById('emailLogin').value.trim().toLowerCase();
   const senha = document.getElementById('senhaLogin').value;
   const btn = document.getElementById('btnEntrar');
 
-  if(!email || !senha) return alert('Preencha todos os campos!');
+  if(!email || !senha) return mostrarErro('Por favor, preencha seu e-mail e senha.');
 
-  btn.textContent = 'Aguarde...';
+  btn.textContent = 'AGUARDE...';
 
   auth.signInWithEmailAndPassword(email, senha)
     .then((userCredential) => {
-      // Se for o seu email de dona, manda pro painel Admin. Se for cliente, manda pra loja.
-      if(email.includes('admin') || email.includes('caroline')) {
+      // Regra oficial para autorizar a dona da loja a entrar no admin:
+      if(email === 'admin@brugnerastore.com.br' || email.includes('admin')) {
         window.location.href = 'admin.html';
       } else {
+        // Se for um cliente que logou, manda ele pra vitrine
         window.location.href = 'index.html';
       }
     })
     .catch((error) => {
-      alert('E-mail ou senha incorretos.');
-      btn.textContent = 'Entrar';
+      mostrarErro('E-mail ou senha incorretos.');
+      btn.textContent = 'ENTRAR';
     });
 }
