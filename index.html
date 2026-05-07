@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="BRUGNERA STORE — Moda feminina exclusiva com elegância e estilo únicos.">
+<meta name="theme-color" content="#0a0a0a">
+<title>BRUGNERA STORE — Moda Feminina</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- FIREBASE COMPAT SDK (Nuvem) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+<!-- ESTILOS -->
+<link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<!-- NAVEGAÇÃO PRINCIPAL -->
+<nav role="navigation" aria-label="Menu principal">
+  <a href="#" class="nav-logo" aria-label="Brugnera Store - Início">
+    <img src="brugnera-logo.jpg" alt="Logo Brugnera Store">
+    <div class="nav-logo-text">BRUGNERA<span>Store</span></div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#colecao">Coleção</a></li>
+    <li><a href="#sale">Sale</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="nav-wpp" aria-label="Fale conosco no WhatsApp">
+      💬 WhatsApp
+    </a>
+    <div class="nav-icon" onclick="toggleCart()" aria-label="Carrinho de compras" role="button" tabindex="0">
+      🛍️<span class="cart-count" id="cartCount">0</span>
+    </div>
+    <button class="nav-menu-btn" onclick="toggleDrawer()" aria-label="Abrir menu" aria-expanded="false" id="menuBtn">☰</button>
+  </div>
+</nav>
+
+<!-- MENU MOBILE DRAWER -->
+<nav class="nav-drawer" id="navDrawer" aria-label="Menu mobile">
+  <a href="#colecao" onclick="closeDrawer()">Coleção</a>
+  <a href="#sale" onclick="closeDrawer()">Sale</a>
+  <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer">💬 WhatsApp</a>
+  <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer">📸 Instagram</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home" aria-label="Banner principal">
+  <div class="hero-content">
+    <p class="hero-tag">✦ Moda Feminina</p>
+    <h1>Vista-se<br>como a mulher<br>que você <em>é.</em></h1>
+    <p>Peças exclusivas para mulheres que sabem o que querem — elegância conectada em tempo real com nossa loja.</p>
+    <div class="hero-btns">
+      <a href="#colecao" class="btn-primary">Ver Coleção</a>
+    </div>
+  </div>
+  <div class="hero-image" role="img" aria-label="Modelo com peça da coleção"></div>
+  <div class="hero-badges" aria-hidden="true">
+    <div class="hero-badge"><span>Exclusivo</span><small>Peças selecionadas</small></div>
+    <div class="hero-badge"><span>12×</span><small>sem juros</small></div>
+    <div class="hero-badge"><span>Brasil</span><small>envio para todo país</small></div>
+  </div>
+</section>
+
+<!-- FAIXA ANIMADA -->
+<div class="strip" role="marquee" aria-label="Informações da loja">
+  <div class="strip-inner" id="stripInner"></div>
+</div>
+
+<!-- PRODUTOS -->
+<section class="products-section" id="colecao" aria-labelledby="produtos-titulo">
+  <div class="section-title">
+    <span class="tag">✦ Destaques</span>
+    <h2 id="produtos-titulo">Coleção Atual</h2>
+    <p>Peças selecionadas com foco em elegância e desejo</p>
+  </div>
+  <div class="filters" role="group" aria-label="Filtrar produtos por categoria">
+    <button class="filter-btn active" onclick="filterProducts('all', this)">Tudo</button>
+    <button class="filter-btn" onclick="filterProducts('vestidos', this)">Vestidos</button>
+    <button class="filter-btn" onclick="filterProducts('blusas', this)">Blusas</button>
+    <button class="filter-btn" onclick="filterProducts('conjuntos', this)">Conjuntos</button>
+    <button class="filter-btn" onclick="filterProducts('acessorios', this)">Acessórios</button>
+  </div>
+  <div class="products-grid" id="productsGrid" role="list">
+    <p style="text-align:center; grid-column:1/-1; color:var(--gray);">Conectando com o estoque da loja...</p>
+  </div>
+</section>
+
+<!-- BANNER PROMOÇÃO -->
+<aside class="promo-banner" id="sale" aria-label="Promoção de temporada">
+  <div class="promo-content">
+    <span class="tag">✦ Oferta Especial</span>
+    <h2>Sale de<br>Temporada</h2>
+    <p>Peças selecionadas com até 40% off. Estoque limitado — não deixe para amanhã o que seu guarda-roupa precisa hoje.</p>
+    <a href="#colecao" class="btn-primary" style="background:var(--gold); border:none;">Aproveitar Agora</a>
+  </div>
+  <div class="promo-timer" id="timer" aria-live="polite" aria-label="Contador regressivo da promoção">
+    <div class="timer-block"><div class="num" id="th">00</div><div class="lbl">Horas</div></div>
+    <div class="timer-block"><div class="num" id="tm">00</div><div class="lbl">Min</div></div>
+    <div class="timer-block"><div class="num" id="ts">00</div><div class="lbl">Seg</div></div>
+  </div>
+</aside>
+
+<!-- INSTAGRAM -->
+<section class="insta-section" aria-labelledby="insta-titulo">
+  <div class="section-title">
+    <span class="tag">✦ @brugnera_store</span>
+    <h2 id="insta-titulo">Siga no Instagram</h2>
+    <p>Inspire-se com looks do dia e bastidores da coleção</p>
+    <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer"
+      style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:10px 24px;background:linear-gradient(135deg,#405DE6,#5851DB,#833AB4,#C13584,#E1306C,#FD1D1D);color:white;border-radius:24px;text-decoration:none;font-size:0.8rem;letter-spacing:0.1em">
+      📸 Ver no Instagram
+    </a>
+  </div>
+  <div class="insta-grid" id="instaGrid"></div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <a href="#" class="footer-logo" aria-label="Brugnera Store - Voltar ao início">
+        <img src="brugnera-logo.jpg" alt="Logo Brugnera Store">
+        <span class="footer-logo-text">BRUGNERA STORE</span>
+      </a>
+      <p>Moda feminina com alma — peças que transformam o dia a dia em uma declaração de estilo.</p>
+      <div class="footer-social">
+        <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer" class="social-btn" aria-label="Instagram">📸</a>
+        <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="social-btn" aria-label="WhatsApp">💬</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Navegação</h4>
+      <ul>
+        <li><a href="#colecao">Coleções</a></li>
+        <li><a href="#sale">Sale</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Atendimento</h4>
+      <ul>
+        <li><a href="#">Troca & Devolução</a></li>
+        <li><a href="#">Rastrear pedido</a></li>
+        <li><a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer">WhatsApp</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacidade</a></li>
+        <li><a href="#">Termos de uso</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2026 BRUGNERA STORE — Todos os direitos reservados</p>
+    <div class="payment-icons">
+      <span class="pay-icon">PIX</span>
+      <span class="pay-icon">VISA</span>
+      <span class="pay-icon">MC</span>
+      <span class="pay-icon">AMEX</span>
+    </div>
+  </div>
+</footer>
+
+<!-- WHATSAPP FLUTUANTE -->
+<a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="wpp-float" aria-label="Fale conosco no WhatsApp">
+  <span class="wpp-float-tooltip">Fale conosco!</span>
+  💬
+</a>
+
+<!-- CARRINHO LATERAL -->
+<div class="cart-overlay" id="cartOverlay" onclick="handleCartClick(event)" role="dialog" aria-modal="true" aria-label="Carrinho de compras">
+  <div class="cart-panel">
+    <div class="cart-header">
+      <h3>Seu Carrinho</h3>
+      <button class="cart-close" onclick="toggleCart()" aria-label="Fechar carrinho">✕</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-footer">
+      <div class="cart-total-row"><span>Subtotal</span><span id="cartSubtotal">R$ 0,00</span></div>
+      <div class="cart-total-row"><span>Frete</span><span style="color:#4caf50">Calcular no checkout</span></div>
+      <div class="cart-total-row main"><span>Total</span><span id="cartTotal">R$ 0,00</span></div>
+      <button class="btn-checkout" onclick="openCheckoutModal()">Finalizar Compra</button>
+      <p class="pix-note">🔒 Pix com 5% de desconto · 12× sem juros no cartão</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PRODUTO -->
+<div class="prod-overlay" id="prodOverlay" onclick="handleProdClick(event)" role="dialog" aria-modal="true" aria-label="Detalhes do produto">
+  <div class="prod-modal" style="position:relative">
+    <button class="prod-modal-close" onclick="closeProdModal()" aria-label="Fechar">✕</button>
+    <div class="prod-modal-img"><img id="modalImg" src="" alt="Foto do produto"></div>
+    <div class="prod-modal-info">
+      <h2 id="modalName"></h2>
+      <div class="prod-modal-price" id="modalPrice"></div>
+      <div class="prod-modal-pix" id="modalPix"></div>
+      <div class="prod-modal-desc" id="modalDesc"></div>
+      <div class="size-label">Selecione o tamanho</div>
+      <div class="size-options" id="modalSizes" role="group" aria-label="Tamanhos disponíveis"></div>
+      <div class="stock-msg" id="modalStock"></div>
+      <button class="btn-primary" style="width:100%" onclick="addToCartFromModal()">Adicionar ao Carrinho</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CHECKOUT COM FRETE AUTOMÁTICO -->
+<div class="checkout-modal" id="checkoutModal">
+  <div class="checkout-box">
+    <h3 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:10px;">Finalizar Pedido</h3>
+    
+    <div class="checkout-form-section">
+      <h4>Dados Pessoais</h4>
+      <input type="text" id="clientName" placeholder="Seu Nome Completo" class="chk-input">
+      <input type="text" id="clientPhone" placeholder="WhatsApp (DDD + Número)" class="chk-input">
+    </div>
+
+    <div class="checkout-form-section">
+      <h4>Endereço de Entrega</h4>
+      <div class="form-row-cep">
+        <input type="text" id="clientCEP" placeholder="CEP" class="chk-input" onkeyup="buscarCEP(this.value)" maxlength="9">
+        <div id="cepLoader" style="display:none; font-size:0.8rem; color:var(--gray); margin-top:5px;">Buscando CEP...</div>
+      </div>
+      
+      <div id="addressFields" style="display:none; margin-top:10px;">
+        <input type="text" id="clientRua" placeholder="Rua / Avenida" class="chk-input" disabled>
+        <div class="form-row">
+          <input type="text" id="clientNum" placeholder="Número" class="chk-input">
+          <input type="text" id="clientComp" placeholder="Complemento" class="chk-input">
+        </div>
+        <input type="text" id="clientBairro" placeholder="Bairro" class="chk-input" disabled>
+        <div class="form-row">
+          <input type="text" id="clientCidade" placeholder="Cidade" class="chk-input" disabled>
+          <input type="text" id="clientUF" placeholder="UF" class="chk-input" disabled style="width:70px;">
+        </div>
+      </div>
+    </div>
+
+    <div class="checkout-form-section" id="shippingSection" style="display:none;">
+      <h4>Escolha o Frete</h4>
+      <div class="shipping-options">
+        <label class="ship-opt">
+          <input type="radio" name="shippingOpt" value="PAC" onchange="selecionarFrete(25.90, 'PAC')">
+          <span><b>Correios PAC</b> (7 a 10 dias úteis) - R$ 25,90</span>
+        </label>
+        <label class="ship-opt">
+          <input type="radio" name="shippingOpt" value="SEDEX" onchange="selecionarFrete(45.50, 'SEDEX')">
+          <span><b>Correios SEDEX</b> (2 a 4 dias úteis) - R$ 45,50</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="checkout-form-section">
+      <h4>Pagamento</h4>
+      <select id="clientPayment" class="chk-input" onchange="atualizarTotalCheckout()">
+        <option value="Pix">Pix (5% Desconto)</option>
+        <option value="Cartão">Cartão de Crédito</option>
+      </select>
+    </div>
+
+    <div class="checkout-total-display">
+      <span>Subtotal: R$ <span id="chkSubtotalVal">0,00</span></span>
+      <span>Frete: R$ <span id="chkFreteVal">0,00</span></span>
+      <strong style="display:block; font-size:1.3rem; margin-top:8px; color:var(--gold);">Total: R$ <span id="chkTotalVal">0,00</span></strong>
+    </div>
+
+    <button class="btn-checkout" style="width:100%; padding:14px; background:var(--gold);" onclick="confirmOnlinePurchase()">Confirmar Pedido</button>
+    <button style="background:none; border:none; margin-top:15px; color:var(--gray); cursor:pointer; font-family:'Jost',sans-serif; text-transform:uppercase; letter-spacing:0.1em; font-size:0.75rem;" onclick="document.getElementById('checkoutModal').style.display='none'">Voltar ao Carrinho</button>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICAÇÃO -->
+<div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+<!-- SCRIPT -->
+<script src="index.js"></script>
+
+</body>
+</html>
