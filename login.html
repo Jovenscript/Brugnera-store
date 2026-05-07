@@ -6,10 +6,8 @@
 <title>Login — BRUGNERA STORE</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-<!-- LIGAÇÃO COM O CSS -->
 <link rel="stylesheet" href="login.css">
 
-<!-- FIREBASE SCRIPTS -->
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 </head>
@@ -17,16 +15,19 @@
 
   <div class="login-container">
     <div class="login-box">
+      
       <div class="logo-area">
         <img src="brugnera-logo.jpg" alt="Logo" onerror="this.style.display='none'">
-        <h2>BRUGNERA<span>Store</span></h2>
+        <h2>BRUGNERA STORE</h2>
+        <small>Painel Administrativo</small>
       </div>
 
+      <div id="errorBox" class="error-box"></div>
+
       <div id="loginForm">
-        <h3 class="form-title">Acesse sua conta</h3>
         <div class="form-group">
           <label>E-mail</label>
-          <input type="email" id="emailLogin" placeholder="seu@email.com">
+          <input type="email" id="emailLogin" placeholder="admin@brugnerastore.com.br">
         </div>
         <div class="form-group">
           <label>Senha</label>
@@ -37,7 +38,6 @@
       </div>
 
       <div id="registerForm" style="display:none;">
-        <h3 class="form-title">Criar nova conta</h3>
         <div class="form-group">
           <label>E-mail</label>
           <input type="email" id="emailCadastro" placeholder="seu@email.com">
@@ -49,10 +49,10 @@
         <button class="btn-primary" onclick="fazerCadastro()" id="btnCadastrar">Cadastrar</button>
         <p class="switch-form">Já tem conta? <span onclick="trocarFormulario()">Faça Login</span></p>
       </div>
+
     </div>
   </div>
 
-<!-- LIGAÇÃO COM O JS -->
 <script src="login.js"></script>
 
 </body>
