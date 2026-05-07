@@ -7,32 +7,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
-<!-- ===== GUARD DE AUTENTICAÇÃO ===== -->
-<div id="authGuard" style="position:fixed;inset:0;background:#0d0d0d;z-index:9999;display:flex;align-items:center;justify-content:center;">
-  <div style="background:#1a1a1a;border:1px solid #333;padding:40px;width:360px;text-align:center;border-top:3px solid #c8a96e;">
-    <img src="brugnera-logo.jpg" alt="Logo" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:16px;" onerror="this.style.display='none'">
-    <h2 style="font-family:'Playfair Display',serif;color:#c8a96e;margin:0 0 4px;">BRUGNERA STORE</h2>
-    <p style="color:#666;font-size:0.78rem;margin:0 0 28px;letter-spacing:0.08em;">PAINEL ADMINISTRATIVO</p>
-    <div id="guardError" style="display:none;background:#3d1a1a;border:1px solid #c0392b;color:#e74c3c;padding:10px 14px;margin-bottom:16px;font-size:0.82rem;text-align:left;"></div>
-    <div style="margin-bottom:14px;text-align:left;">
-      <label style="color:#888;font-size:0.75rem;display:block;margin-bottom:6px;letter-spacing:0.06em;">E-MAIL</label>
-      <input id="guardEmail" type="email" placeholder="admin@brugnera.com" onkeydown="if(event.key==='Enter')guardLogin()" style="width:100%;padding:10px 14px;background:#111;border:1px solid #2a2a2a;color:#fff;font-family:'Jost',sans-serif;outline:none;box-sizing:border-box;font-size:0.9rem;">
-    </div>
-    <div style="margin-bottom:24px;text-align:left;">
-      <label style="color:#888;font-size:0.75rem;display:block;margin-bottom:6px;letter-spacing:0.06em;">SENHA</label>
-      <input id="guardPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')guardLogin()" style="width:100%;padding:10px 14px;background:#111;border:1px solid #2a2a2a;color:#fff;font-family:'Jost',sans-serif;outline:none;box-sizing:border-box;font-size:0.9rem;">
-    </div>
-    <button id="guardBtn" onclick="guardLogin()" style="width:100%;padding:13px;background:#c8a96e;color:#0d0d0d;font-family:'Jost',sans-serif;font-weight:600;font-size:0.9rem;border:none;cursor:pointer;letter-spacing:0.08em;transition:opacity 0.2s;">ENTRAR</button>
-    <p style="color:#444;font-size:0.7rem;margin-top:20px;">Acesso restrito — apenas administradoras</p>
-  </div>
-</div>
-
-<!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
     <span>BRUGNERA STORE</span>
@@ -47,34 +25,34 @@
     </div>
     <div class="nav-group">
       <div class="nav-group-label">Catálogo</div>
-      <div class="nav-item" onclick="showPage('produtos', this)"><span class="icon">👗</span> Produtos</div>
+      <div class="nav-item" onclick="showPage('produtos', this)"><span class="icon">👗</span> Produtos Ativos</div>
+      <div class="nav-item" onclick="showPage('importados', this)">
+        <span class="icon">📸</span> Importados Insta 
+        <span id="badgeInsta" style="display:none; background:var(--rose); color:white; border-radius:50%; padding:2px 6px; font-size:0.6rem; margin-left:auto; font-weight:bold;">0</span>
+      </div>
       <div class="nav-item" onclick="showPage('estoque', this)"><span class="icon">📋</span> Estoque</div>
     </div>
     <div class="nav-group">
       <div class="nav-group-label">Marketing</div>
-      <div class="nav-item" onclick="showPage('instagram', this)"><span class="icon">📸</span> Instagram → Site</div>
       <div class="nav-item" onclick="showPage('ia', this)"><span class="icon">🤖</span> IA Marketing</div>
     </div>
   </nav>
   <div class="sidebar-bottom">
     <div class="cloud-status"><div class="cloud-dot"></div> Conectado à Nuvem</div>
-    <button onclick="adminLogout()" style="margin-top:10px;width:100%;background:none;border:1px solid #333;color:#666;font-size:0.75rem;padding:7px;cursor:pointer;font-family:'Jost',sans-serif;letter-spacing:0.05em;">SAIR DA CONTA</button>
   </div>
 </aside>
 
-<!-- MAIN -->
 <main class="main">
   <div class="topbar">
     <span class="page-title" id="pageTitle">Dashboard</span>
     <div class="topbar-right">
-      <div class="notif-btn">🔔<div class="notif-dot"></div></div>
+      <div class="notif-btn">🔔<div class="notif-dot" id="mainNotifDot"></div></div>
       <div style="font-size:0.78rem;color:var(--text2)" id="dateBadge"></div>
     </div>
   </div>
 
   <div class="content">
 
-    <!-- DASHBOARD -->
     <div class="page active" id="pageDashboard">
       <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">Faturamento Total</div><div class="kpi-value" style="color:var(--gold)" id="dashReceita">R$ 0,00</div><div class="kpi-delta">Soma de todos os canais</div></div>
@@ -101,7 +79,6 @@
       </div>
     </div>
 
-    <!-- PDV -->
     <div class="page" id="pagePdv">
       <div class="page-header"><h2>Frente de Caixa (Loja Física)</h2></div>
       <div class="pdv-container">
@@ -123,7 +100,6 @@
       </div>
     </div>
 
-    <!-- PEDIDOS -->
     <div class="page" id="pagePedidos">
       <div class="page-header"><h2>Gestão de Pedidos</h2></div>
       <div class="order-filters">
@@ -141,10 +117,9 @@
       </div>
     </div>
 
-    <!-- PRODUTOS -->
     <div class="page" id="pageProdutos">
       <div class="page-header">
-        <h2>Produtos</h2>
+        <h2>Produtos Ativos</h2>
         <div style="display:flex; gap:10px;">
           <input type="file" id="importCSVInput" accept=".csv" style="display:none" onchange="importCSV(event)">
           <button class="btn btn-outline" onclick="document.getElementById('importCSVInput').click()">⬆️ Importar CSV</button>
@@ -170,12 +145,26 @@
       </div>
     </div>
 
-    <!-- ESTOQUE -->
+    <div class="page" id="pageImportados">
+      <div class="page-header">
+        <div>
+          <h2>Rascunhos do Instagram</h2>
+          <p style="color:var(--text2); font-size:0.85rem; margin-top:6px;">Produtos capturados automaticamente. Clique em "Ativar" para definir o estoque e enviar para a loja.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table><thead><tr><th>Foto do Post</th><th>Nome Sugerido</th><th>Preço Lido</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="draftTableBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
     <div class="page" id="pageEstoque">
       <div class="page-header"><h2>Controle de Estoque</h2><button class="btn btn-gold" onclick="openStockEntry()">+ Entrada de Estoque</button></div>
       <div class="stock-grid" id="stockGrid"></div>
       <div class="stock-log card">
-        <div class="card-title">Histórico de Movimentações</div>
+        <div class="card-title">Histórico de Movimentações (Somente Manual)</div>
         <div class="table-wrap">
           <table><thead><tr><th>Data</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Responsável</th></tr></thead>
           <tbody id="stockLog">
@@ -185,87 +174,12 @@
       </div>
     </div>
 
-    <!-- ====================================== -->
-    <!-- 📸 INSTAGRAM → PRODUTO NO SITE         -->
-    <!-- ====================================== -->
-    <div class="page" id="pageInstagram">
-      <div class="page-header"><h2>📸 Instagram → Produto no Site</h2></div>
-      <div class="ai-panel">
-        <div class="ai-header">
-          <div class="ai-icon">📸</div>
-          <div>
-            <div class="ai-title">Automação de Produto via Instagram</div>
-            <div class="ai-sub">Cole a legenda do post do Instagram — a IA extrai nome, preço, tamanhos, cores e monta o produto automaticamente. Você só adiciona o estoque!</div>
-          </div>
-        </div>
-
-        <div id="igStep1">
-          <div class="form-group">
-            <div class="ai-prompt-label">Cole aqui a legenda do post do Instagram</div>
-            <textarea id="igCaption" rows="6" placeholder="Ex: ✨ Chegou o Vestido Floral Midi! Em chiffon rosê com manga bufante e botões dourados. Tamanhos P, M e G. R$ 189,90. 🌸 Link na bio! #ModaFeminina #BrugneraStore #Vestido" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;font-size:0.9rem;resize:vertical;outline:none;box-sizing:border-box;line-height:1.5;"></textarea>
-          </div>
-          <div class="form-group">
-            <div class="ai-prompt-label">Foto do produto (opcional)</div>
-            <input type="file" id="igImageFile" accept="image/*" onchange="previewIgImage(event)">
-            <img id="igImagePreview" style="max-width:200px;display:none;border-radius:6px;border:1px solid var(--border);margin-top:10px;">
-          </div>
-          <button class="btn btn-gold" onclick="analyzeInstagram()" style="padding:12px 32px;font-size:0.95rem;">🪄 Analisar Post e Pré-Montar Produto</button>
-        </div>
-
-        <div class="ai-loading" id="igLoading" style="display:none;"><div class="spinner"></div> IA analisando o post do Instagram...</div>
-
-        <div id="igStep2" style="display:none;">
-          <div style="background:var(--surface2);border:1px solid var(--gold);padding:22px;margin-bottom:20px;position:relative;">
-            <div style="position:absolute;top:-1px;right:20px;background:var(--gold);color:#0d0d0d;font-size:0.68rem;font-weight:700;padding:4px 10px;letter-spacing:0.06em;">✓ IA EXTRAIU AUTOMATICAMENTE</div>
-            <h3 style="font-family:'Playfair Display',serif;color:var(--gold);margin:12px 0 20px;">Produto Pré-Montado — Revise se quiser</h3>
-            <div class="form-row2">
-              <div class="form-group"><label>Nome do Produto</label><input type="text" id="igFNome" style="width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;outline:none;box-sizing:border-box;"></div>
-              <div class="form-group"><label>Categoria</label>
-                <select id="igFCat" style="width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;">
-                  <option value="vestidos">Vestidos</option><option value="blusas">Blusas</option><option value="conjuntos">Conjuntos</option><option value="acessorios">Acessórios</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row2">
-              <div class="form-group"><label>Preço de Venda (R$)</label><input type="number" id="igFPreco" placeholder="0.00" step="0.01" style="width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;outline:none;box-sizing:border-box;"></div>
-              <div class="form-group"><label>Tamanhos Disponíveis</label><input type="text" id="igFTamanhos" placeholder="P,M,G" style="width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;outline:none;box-sizing:border-box;"></div>
-            </div>
-            <div class="form-group"><label>Descrição do Produto</label><textarea id="igFDesc" rows="3" style="width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Jost',sans-serif;resize:vertical;outline:none;box-sizing:border-box;"></textarea></div>
-
-            <!-- Único campo manual: estoque -->
-            <div style="background:rgba(39,174,96,0.08);border:2px solid var(--green);padding:18px;margin-top:4px;">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                <span style="font-size:1.3rem;">✅</span>
-                <label style="color:var(--green);font-weight:600;font-size:0.95rem;">Só falta isso: Quantidade em Estoque</label>
-              </div>
-              <input type="number" id="igFEstoque" placeholder="Ex: 10 — quantas peças você tem?" min="0" style="width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--green);color:var(--text);font-family:'Jost',sans-serif;font-size:1rem;outline:none;box-sizing:border-box;">
-            </div>
-          </div>
-
-          <!-- Legenda gerada -->
-          <div class="card" style="margin-bottom:18px;">
-            <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-              <span>📝 Legenda Otimizada para Instagram</span>
-              <button onclick="copyIgCaption()" class="btn btn-outline btn-sm">Copiar</button>
-            </div>
-            <div id="igGeneratedCaption" style="white-space:pre-wrap;color:var(--text2);font-size:0.88rem;line-height:1.65;padding:4px 0;"></div>
-          </div>
-
-          <div style="display:flex;gap:12px;flex-wrap:wrap;">
-            <button class="btn btn-gold" onclick="publishIgProduct()" style="padding:12px 32px;font-size:0.95rem;">🚀 Publicar no Site Agora</button>
-            <button class="btn btn-outline" onclick="resetIg()">← Analisar Novo Post</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- IA MARKETING -->
     <div class="page" id="pageIa">
-      <div class="page-header"><h2>🤖 IA — Gerador de Marketing</h2></div>
+      <div class="page-header"><h2>IA — Gerador de Marketing</h2></div>
       <div class="ai-panel">
         <div class="ai-header">
           <div class="ai-icon">🤖</div>
-          <div><div class="ai-title">Marketing Automático com IA Real</div><div class="ai-sub">Selecione um produto e gere conteúdo de verdade com Inteligência Artificial</div></div>
+          <div><div class="ai-title">Marketing Automático com IA</div><div class="ai-sub">Selecione um produto e gere conteúdo persuasivo para Instagram e Shopee</div></div>
         </div>
         <div class="form-group">
           <div class="ai-prompt-label">Selecionar Produto</div>
@@ -276,28 +190,25 @@
           <div class="ai-type-tabs">
             <div class="ai-type-tab active" onclick="setAiType('legenda',this)">📝 Legenda Insta</div>
             <div class="ai-type-tab" onclick="setAiType('shopee',this)">🟧 Descrição Shopee</div>
-            <div class="ai-type-tab" onclick="setAiType('stories',this)">📱 Roteiro Stories</div>
-            <div class="ai-type-tab" onclick="setAiType('relatorio',this)">📊 Análise da Loja</div>
+            <div class="ai-type-tab" onclick="setAiType('stories',this)">📱 Stories</div>
+            <div class="ai-type-tab" onclick="setAiType('relatorio',this)">📊 Relatório Loja</div>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
           <button class="btn btn-gold" onclick="generateAI()">🪄 Gerar com IA</button>
         </div>
-        <div class="ai-loading" id="aiLoading"><div class="spinner"></div> Gerando conteúdo com IA real...</div>
+        <div class="ai-loading" id="aiLoading"><div class="spinner"></div> Gerando conteúdo...</div>
         <div id="aiResultArea" style="display:none">
           <div class="ai-result-tabs">
-            <button class="ai-rtab active">Resultado</button>
+            <button class="ai-rtab active" onclick="switchAiTab('resultado',this)">Resultado</button>
           </div>
           <div class="ai-result-pane active" id="tabResultado"></div>
-          <button onclick="copyAiResult()" class="btn btn-outline btn-sm" style="margin-top:12px;">📋 Copiar</button>
         </div>
       </div>
     </div>
 
-  </div>
-</main>
+  </div></main>
 
-<!-- MODAL PRODUTO -->
 <div class="modal-overlay" id="prodModal">
   <div class="modal">
     <div class="modal-header">
@@ -317,8 +228,9 @@
       </div>
       <div class="form-row2">
         <div class="form-group"><label>Tamanhos</label><input type="text" id="fTamanhos" placeholder="P,M,G"></div>
-        <div class="form-group"><label>Estoque Atual</label><input type="number" id="fEstoque" placeholder="0"></div>
+        <div class="form-group"><label>Estoque Atual (Obrigatório para ativar)</label><input type="number" id="fEstoque" placeholder="0" style="border-color:var(--gold);"></div>
       </div>
+      
       <div class="form-group" style="background:var(--surface2); padding:16px; border:1px solid var(--border);">
         <label>Onde este produto será vendido?</label>
         <div class="channel-box">
@@ -327,13 +239,15 @@
           <label class="channel-opt" style="color:var(--text2)"><input type="checkbox" checked disabled> 🏬 PDV (Física)</label>
         </div>
       </div>
+
       <div class="form-group"><label>Descrição Breve</label><textarea id="fDesc" rows="2" placeholder="Descreva o produto..."></textarea></div>
+      
       <div class="form-group">
-        <label>Imagem do Produto</label>
-        <input type="file" id="fImgFile" accept="image/*">
-        <input type="hidden" id="fImgBase64">
-        <img id="imgPreview" style="max-width:120px; display:none; margin-top:10px; border-radius:4px; border:1px solid var(--border);">
+        <label>Imagens do Produto (Selecione várias fotos do conjunto)</label>
+        <input type="file" id="fImgFile" accept="image/*" multiple>
+        <div id="imgPreviewContainer" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;"></div>
       </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeProdModal()">Cancelar</button>
@@ -342,7 +256,6 @@
   </div>
 </div>
 
-<!-- MODAL ESTOQUE -->
 <div class="modal-overlay" id="stockModal">
   <div class="modal" style="width:480px">
     <div class="modal-header"><h3>Entrada de Estoque</h3><button style="background:none;border:none;color:var(--text2);font-size:1.3rem;cursor:pointer" onclick="document.getElementById('stockModal').classList.remove('show')">✕</button></div>
@@ -361,5 +274,6 @@
 </div>
 
 <script src="admin.js"></script>
+
 </body>
 </html>
