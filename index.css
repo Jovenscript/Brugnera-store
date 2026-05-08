@@ -40,7 +40,7 @@ nav {
 .nav-drawer a { text-decoration: none; color: var(--black); font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .nav-drawer a:last-child { border-bottom: none; }
 
-/* HERO */
+/* HERO (FOTO NOVA) */
 .hero { height: 100vh; display: flex; align-items: center; background: linear-gradient(135deg, #f7f2ed 0%, #ede5db 60%, #e0d4c7 100%); padding-top: 68px; overflow: hidden; position: relative; }
 .hero::before { content: ''; position: absolute; top: -100px; right: -100px; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(201,169,110,0.15), transparent 70%); }
 .hero-content { padding: 0 80px; max-width: 55%; z-index: 2; }
@@ -51,7 +51,7 @@ nav {
 .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; }
 .btn-primary { background: var(--black); color: var(--white); padding: 15px 36px; border: none; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.8rem; letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.3s; text-decoration: none; display: inline-block; }
 .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
-.hero-image { position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: url('https://images.unsplash.com/photo-1581044777550-4cfa60707c03?w=800&q=80') center/cover; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); }
+.hero-image { position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80') center/cover; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); }
 .hero-badges { position: absolute; bottom: 60px; left: 80px; display: flex; gap: 40px; }
 .hero-badge span { display: block; font-size: 1.5rem; font-weight: 700; font-family: 'Playfair Display', serif; }
 .hero-badge small { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray); }
@@ -156,23 +156,34 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .btn-checkout:hover { background: var(--gold); }
 .pix-note { text-align: center; margin-top: 12px; font-size: 0.75rem; color: var(--gray); }
 
-/* MODAL PRODUTO */
-.prod-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; padding: 16px; }
+/* MODAL PRODUTO TELA CHEIA E GHOST EFFECT */
+.prod-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.4s; display: flex; align-items: center; justify-content: center; }
 .prod-overlay.open { opacity: 1; pointer-events: all; }
-.prod-modal { background: var(--cream); width: 900px; max-width: 95vw; max-height: 90vh; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; }
-.prod-modal-img { background: #ede8e3; aspect-ratio: 3/4; overflow: hidden; }
-.prod-modal-img img { width: 100%; height: 100%; object-fit: cover; }
-.prod-modal-info { padding: 50px 40px; display: flex; flex-direction: column; justify-content: center; }
-.prod-modal-info h2 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 16px; }
-.prod-modal-price { font-size: 1.6rem; font-weight: 300; margin-bottom: 8px; }
-.prod-modal-pix { font-size: 0.8rem; color: #4caf50; margin-bottom: 24px; }
-.prod-modal-desc { font-size: 0.88rem; color: #555; line-height: 1.8; font-weight: 300; margin-bottom: 28px; }
-.size-label { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px; font-weight: 500; }
-.size-options { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; }
-.size-btn { width: 44px; height: 44px; border: 1.5px solid var(--border); background: none; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.8rem; transition: all 0.2s; }
+.prod-modal { width: 100vw; height: 100vh; max-width: 100%; max-height: 100%; background: var(--cream); display: flex; flex-direction: row; border-radius: 0; position:relative;}
+.prod-modal-close { position: absolute; top: 20px; right: 25px; background: rgba(255,255,255,0.8); border: none; font-size: 1.5rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
+
+.prod-modal-img { flex: 1; position: relative; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; user-select: none; }
+.carousel-img { position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; opacity: 0; transform: scale(1.03); transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out; pointer-events: none; }
+.carousel-img.active { opacity: 1; transform: scale(1); }
+
+.carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.3); color: white; border: none; width: 54px; height: 54px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; z-index: 10; display:flex; align-items:center; justify-content:center; backdrop-filter: blur(4px); transition: 0.2s;}
+.carousel-btn:hover { background: rgba(0,0,0,0.7); }
+.carousel-btn.prev { left: 30px; }
+.carousel-btn.next { right: 30px; }
+.carousel-dots { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 10; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; }
+.dot.active { background: white; transform: scale(1.2);}
+
+.prod-modal-info { width: 450px; background: var(--cream); padding: 60px 40px; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+.prod-modal-info h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 16px; }
+.prod-modal-price { font-size: 1.8rem; font-weight: 300; margin-bottom: 8px; color: var(--gold); }
+.prod-modal-pix { font-size: 0.85rem; color: #4caf50; margin-bottom: 24px; font-weight: 500;}
+.prod-modal-desc { font-size: 0.95rem; color: #555; line-height: 1.8; font-weight: 300; margin-bottom: 32px; }
+.size-label { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px; font-weight: 500; }
+.size-options { display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
+.size-btn { width: 48px; height: 48px; border: 1.5px solid var(--border); background: none; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.85rem; transition: all 0.2s; border-radius: 4px;}
 .size-btn.active { border-color: var(--black); background: var(--black); color: white; }
 .stock-msg { font-size: 0.75rem; color: var(--rose); margin-bottom: 24px; }
-.prod-modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; font-size: 1.5rem; cursor: pointer; z-index: 10; }
 
 /* CHECKOUT MODAL COM FRETE */
 .checkout-modal { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:400; display:none; align-items:center; justify-content:center; }
@@ -188,7 +199,6 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .checkout-total-display { background: var(--black); color: white; padding: 15px; border-radius: 4px; margin-bottom: 20px; text-align: right; }
 .checkout-total-display span { display: block; font-size: 0.85rem; margin-bottom: 4px; }
 
-/* TOAST */
 .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--black); color: white; padding: 14px 24px; font-size: 0.82rem; letter-spacing: 0.08em; z-index: 500; opacity: 0; transition: all 0.4s; border-left: 3px solid var(--gold); white-space: nowrap; }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
@@ -206,8 +216,14 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   .insta-grid { grid-template-columns: repeat(3, 1fr); }
   .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
   .cart-panel { width: 100vw; }
-  .prod-modal { grid-template-columns: 1fr; }
-  .prod-modal-info { padding: 28px 24px; }
+  
+  /* Modal Mobile */
+  .prod-modal { flex-direction: column; }
+  .prod-modal-img { height: 60vh; flex: none; width: 100vw; }
+  .prod-modal-info { width: 100vw; flex: 1; padding: 30px 20px; }
+  .carousel-btn { width: 40px; height: 40px; font-size: 1.2rem; }
+  .carousel-btn.prev { left: 10px; }
+  .carousel-btn.next { right: 10px; }
 }
 @media (max-width: 480px) {
   .hero-badges { display: none; }
