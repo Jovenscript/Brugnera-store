@@ -7,27 +7,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
-
-<div class="modal-overlay" id="authGuard" style="display:flex; z-index:9999; background:var(--bg);">
-  <div class="modal" style="width:400px; padding:40px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
-    <div class="logo-area" style="margin-bottom:20px;">
-      <h2 style="font-family:'Playfair Display',serif; color:var(--gold); letter-spacing:0.1em; font-size:1.5rem;">BRUGNERA STORE</h2>
-      <small style="font-size:0.65rem; color:var(--text2); letter-spacing:0.15em; text-transform:uppercase;">Acesso Restrito</small>
-    </div>
-    <div id="guardError" style="display:none; background:rgba(212,133,122,0.15); color:var(--rose); padding:10px; margin-bottom:15px; font-size:0.85rem; border:1px solid rgba(212,133,122,0.3); text-align:left;"></div>
-    <div class="form-group" style="text-align:left;">
-      <input type="email" id="guardEmail" placeholder="admin@brugnerastore.com.br" style="width:100%; padding:14px; background:var(--surface2); border:1px solid var(--border); color:white; outline:none; font-family:'Jost',sans-serif;">
-    </div>
-    <div class="form-group" style="text-align:left;">
-      <input type="password" id="guardPass" placeholder="Senha" style="width:100%; padding:14px; background:var(--surface2); border:1px solid var(--border); color:white; outline:none; font-family:'Jost',sans-serif;">
-    </div>
-    <button class="btn btn-gold" id="guardBtn" style="width:100%; padding:14px; font-size:0.9rem;" onclick="guardLogin()">ENTRAR</button>
-  </div>
-</div>
 
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -44,22 +26,15 @@
     <div class="nav-group">
       <div class="nav-group-label">Catálogo</div>
       <div class="nav-item" onclick="showPage('produtos', this)"><span class="icon">👗</span> Produtos</div>
-      
-      <div class="nav-item" onclick="showPage('importados', this)">
-        <span class="icon">📥</span> Rascunhos Make 
-        <span id="badgeInsta" style="display:none; background:var(--rose); color:white; border-radius:50%; padding:2px 6px; font-size:0.6rem; margin-left:auto; font-weight:bold;">0</span>
-      </div>
-      
       <div class="nav-item" onclick="showPage('estoque', this)"><span class="icon">📋</span> Estoque</div>
     </div>
     <div class="nav-group">
       <div class="nav-group-label">Marketing</div>
-      <div class="nav-item" onclick="showPage('instagram', this)"><span class="icon">📸</span> Insta → Site (IA)</div>
       <div class="nav-item" onclick="showPage('ia', this)"><span class="icon">🤖</span> IA Marketing</div>
     </div>
   </nav>
   <div class="sidebar-bottom">
-    <div class="cloud-status" style="cursor:pointer;" onclick="adminLogout()"><div class="cloud-dot" style="background:var(--rose);box-shadow:none;"></div> Sair do Sistema</div>
+    <div class="cloud-status"><div class="cloud-dot"></div> Conectado à Nuvem</div>
   </div>
 </aside>
 
@@ -67,7 +42,7 @@
   <div class="topbar">
     <span class="page-title" id="pageTitle">Dashboard</span>
     <div class="topbar-right">
-      <div class="notif-btn">🔔<div class="notif-dot" id="mainNotifDot"></div></div>
+      <div class="notif-btn">🔔<div class="notif-dot"></div></div>
       <div style="font-size:0.78rem;color:var(--text2)" id="dateBadge"></div>
     </div>
   </div>
@@ -152,31 +127,12 @@
         <input type="text" id="prodSearch" placeholder="Buscar produto..." oninput="filterProdTable()">
         <select id="prodCatFilter" onchange="filterProdTable()">
           <option value="">Todas categorias</option>
-          <option value="vestidos">Vestidos</option>
-          <option value="blusas">Blusas</option>
-          <option value="conjuntos">Conjuntos</option>
-          <option value="acessorios">Acessórios</option>
         </select>
       </div>
       <div class="card">
         <div class="table-wrap">
           <table><thead><tr><th>Foto</th><th>Nome</th><th>Custo</th><th>Venda</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody id="prodTableBody"></tbody></table>
-        </div>
-      </div>
-    </div>
-
-    <div class="page" id="pageImportados">
-      <div class="page-header">
-        <div>
-          <h2>Rascunhos de Automação (Make)</h2>
-          <p style="color:var(--text2); font-size:0.85rem; margin-top:6px;">Produtos capturados automaticamente. Defina o estoque para enviar para a vitrine da loja.</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="table-wrap">
-          <table><thead><tr><th>Foto Post</th><th>Nome Sugerido</th><th>Preço</th><th>Status</th><th>Ações</th></tr></thead>
-          <tbody id="draftTableBody"></tbody></table>
         </div>
       </div>
     </div>
@@ -191,59 +147,6 @@
           <tbody id="stockLog">
             <tr><td colspan="5" style="text-align:center; color:var(--text2)">Nenhuma movimentação manual.</td></tr>
           </tbody></table>
-        </div>
-      </div>
-    </div>
-
-    <div class="page" id="pageInstagram">
-      <div class="page-header">
-        <h2>📸 Importar do Instagram (IA Claude)</h2>
-      </div>
-      <div class="card">
-        <div id="igStep1">
-          <div class="form-group">
-            <label>Legenda do Instagram</label>
-            <textarea id="igCaption" rows="4" placeholder="Cole aqui a legenda completa do post..."></textarea>
-          </div>
-          <div class="form-group">
-            <label>Foto do Post (Opcional, mas ajuda a IA)</label>
-            <input type="file" id="igImageFile" onchange="previewIgImage(event)">
-            <img id="igImagePreview" style="display:none; max-width:200px; margin-top:10px; border-radius:4px;">
-          </div>
-          <button class="btn btn-gold" onclick="analyzeInstagram()">🪄 Analisar com IA Claude</button>
-        </div>
-        
-        <div id="igLoading" style="display:none; padding:30px; text-align:center; color:var(--gold);">
-          <div class="spinner" style="margin: 0 auto 15px;"></div>
-          Analisando imagem e texto com Inteligência Artificial...
-        </div>
-
-        <div id="igStep2" style="display:none;">
-          <h3 style="margin-bottom:20px; color:var(--gold);">Dados Extraídos</h3>
-          <div class="form-row2">
-            <div class="form-group"><label>Nome</label><input type="text" id="igFNome"></div>
-            <div class="form-group"><label>Categoria</label><input type="text" id="igFCat"></div>
-          </div>
-          <div class="form-row2">
-            <div class="form-group"><label>Preço</label><input type="text" id="igFPreco"></div>
-            <div class="form-group"><label>Tamanhos</label><input type="text" id="igFTamanhos"></div>
-          </div>
-          <div class="form-group">
-            <label>Estoque (Obrigatório para Publicar)</label>
-            <input type="number" id="igFEstoque" style="border-color:var(--gold);">
-          </div>
-          <div class="form-group"><label>Descrição (Site)</label><textarea id="igFDesc" rows="2"></textarea></div>
-          
-          <div class="form-group" style="background:var(--surface2); padding:15px; border-radius:4px; border:1px solid var(--border);">
-            <label style="color:var(--gold);">Legenda Otimizada para o Instagram</label>
-            <div id="igGeneratedCaption" style="font-size:0.85rem; line-height:1.6; white-space:pre-wrap; margin-bottom:10px;"></div>
-            <button class="btn btn-outline btn-sm" onclick="copyIgCaption()">Copiar Legenda</button>
-          </div>
-
-          <div style="display:flex; gap:10px; margin-top:20px;">
-            <button class="btn btn-outline" onclick="resetIg()">Cancelar</button>
-            <button class="btn btn-gold" onclick="publishIgProduct()">Publicar no Site</button>
-          </div>
         </div>
       </div>
     </div>
@@ -277,7 +180,6 @@
             <button class="ai-rtab active" onclick="switchAiTab('resultado',this)">Resultado</button>
           </div>
           <div class="ai-result-pane active" id="tabResultado"></div>
-          <button class="btn btn-outline" style="margin-top:15px;" onclick="copyAiResult()">Copiar Texto</button>
         </div>
       </div>
     </div>
@@ -293,8 +195,10 @@
     <div class="modal-body">
       <div class="form-row2">
         <div class="form-group"><label>Nome do Produto</label><input type="text" id="fNome" placeholder="Ex: Vestido Noite Fendi"></div>
-        <div class="form-group"><label>Categoria</label>
-          <select id="fCat"><option value="vestidos">Vestidos</option><option value="blusas">Blusas</option><option value="conjuntos">Conjuntos</option><option value="acessorios">Acessórios</option></select>
+        <div class="form-group">
+          <label>Categoria (Escolha ou Digite uma Nova)</label>
+          <input type="text" id="fCat" list="catList" placeholder="Ex: Bolsas, Celulares, Vestidos...">
+          <datalist id="catList"></datalist>
         </div>
       </div>
       <div class="form-row2">
@@ -302,7 +206,7 @@
         <div class="form-group"><label>Preço de Venda (R$)</label><input type="number" id="fPreco" placeholder="0.00" step="0.01"></div>
       </div>
       <div class="form-row2">
-        <div class="form-group"><label>Tamanhos</label><input type="text" id="fTamanhos" placeholder="P,M,G"></div>
+        <div class="form-group"><label>Tamanhos (Use vírgula para separar)</label><input type="text" id="fTamanhos" placeholder="P,M,G"></div>
         <div class="form-group"><label>Estoque Atual</label><input type="number" id="fEstoque" placeholder="0"></div>
       </div>
       
@@ -318,10 +222,9 @@
       <div class="form-group"><label>Descrição Breve</label><textarea id="fDesc" rows="2" placeholder="Descreva o produto..."></textarea></div>
       
       <div class="form-group">
-        <label>Imagem do Produto</label>
-        <input type="file" id="fImgFile" accept="image/*">
-        <input type="hidden" id="fImgBase64">
-        <img id="imgPreview" style="max-width:120px; display:none; margin-top:10px; border-radius:4px; border:1px solid var(--border);">
+        <label>Imagens do Produto (Selecione várias fotos do conjunto para o Carrossel)</label>
+        <input type="file" id="fImgFile" accept="image/*" multiple>
+        <div id="imgPreviewContainer" style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;"></div>
       </div>
 
     </div>
@@ -350,5 +253,6 @@
 </div>
 
 <script src="admin.js"></script>
+
 </body>
 </html>
