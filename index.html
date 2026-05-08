@@ -68,13 +68,11 @@
     <h2 id="produtos-titulo">Coleção Atual</h2>
     <p>Peças selecionadas com foco em elegância e desejo</p>
   </div>
-  <div class="filters" role="group" aria-label="Filtrar produtos por categoria">
-    <button class="filter-btn active" onclick="filterProducts('all', this)">Tudo</button>
-    <button class="filter-btn" onclick="filterProducts('vestidos', this)">Vestidos</button>
-    <button class="filter-btn" onclick="filterProducts('blusas', this)">Blusas</button>
-    <button class="filter-btn" onclick="filterProducts('conjuntos', this)">Conjuntos</button>
-    <button class="filter-btn" onclick="filterProducts('acessorios', this)">Acessórios</button>
+  
+  <div class="filters" id="dynamicFilters" role="group" aria-label="Filtrar produtos por categoria">
+    <p style="color:var(--gray); font-size:0.8rem;">Carregando coleções...</p>
   </div>
+  
   <div class="products-grid" id="productsGrid" role="list">
     <p style="text-align:center; grid-column:1/-1; color:var(--gray);">Conectando com o estoque da loja...</p>
   </div>
@@ -181,9 +179,16 @@
 </div>
 
 <div class="prod-overlay" id="prodOverlay" onclick="handleProdClick(event)" role="dialog" aria-modal="true" aria-label="Detalhes do produto">
-  <div class="prod-modal" style="position:relative">
+  <div class="prod-modal">
     <button class="prod-modal-close" onclick="closeProdModal()" aria-label="Fechar">✕</button>
-    <div class="prod-modal-img"><img id="modalImg" src="" alt="Foto do produto"></div>
+    
+    <div class="prod-modal-img" id="carouselArea">
+      <div id="carouselContainer" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center;"></div>
+      <button class="carousel-btn prev" onclick="prevImage(event)" aria-label="Foto anterior">❮</button>
+      <button class="carousel-btn next" onclick="nextImage(event)" aria-label="Próxima foto">❯</button>
+      <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+
     <div class="prod-modal-info">
       <h2 id="modalName"></h2>
       <div class="prod-modal-price" id="modalPrice"></div>
@@ -192,7 +197,7 @@
       <div class="size-label">Selecione o tamanho</div>
       <div class="size-options" id="modalSizes" role="group" aria-label="Tamanhos disponíveis"></div>
       <div class="stock-msg" id="modalStock"></div>
-      <button class="btn-primary" style="width:100%" onclick="addToCartFromModal()">Adicionar ao Carrinho</button>
+      <button class="btn-primary" style="width:100%; padding:18px;" onclick="addToCartFromModal()">Adicionar ao Carrinho</button>
     </div>
   </div>
 </div>
@@ -264,6 +269,5 @@
 <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
 <script src="index.js"></script>
-
 </body>
 </html>
