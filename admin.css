@@ -17,7 +17,7 @@ body { font-family:'Jost',sans-serif; background:var(--bg); color:var(--text); d
 .nav-item:hover { color:var(--text); background:var(--surface2); }
 .nav-item.active { color:var(--gold); background:rgba(201,169,110,0.08); border-left-color:var(--gold); }
 .nav-item .icon { font-size:1rem; width:20px; text-align:center; }
-.sidebar-bottom { margin-top:auto; padding:20px 24px; border-top:1px solid var(--border); display:flex; align-items:center; gap:8px;}
+.sidebar-bottom { margin-top:auto; padding:20px 24px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:8px;}
 
 /* MAIN */
 .main { margin-left:240px; flex:1; display:flex; flex-direction:column; }
@@ -58,6 +58,7 @@ tbody tr:hover td { background:var(--surface2); }
 .status-badge.enviado { background:rgba(96,165,250,0.15); color:var(--blue); }
 .status-badge.entregue { background:rgba(201,169,110,0.15); color:var(--gold); }
 .status-badge.pendente { background:rgba(212,133,122,0.15); color:var(--rose); }
+.status-badge.rascunho { background:rgba(255,255,255,0.1); color:var(--text2); }
 
 /* BUTTONS & FORMS */
 .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap: wrap; gap: 12px; }
