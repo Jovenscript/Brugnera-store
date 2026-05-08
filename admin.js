@@ -67,13 +67,13 @@ function guardLogin() {
       if (!ADMIN_EMAILS.includes(cred.user.email)) {
         auth.signOut();
         showGuardError('Este e-mail não tem permissão de administrador.');
-        btn.textContent = 'ENTRAR';
+        btn.textContent = 'ENTRAR NO PAINEL';
         btn.style.opacity = '1';
       }
     })
     .catch((err) => {
       showGuardError('E-mail ou senha incorretos. Tente novamente.');
-      btn.textContent = 'ENTRAR';
+      btn.textContent = 'ENTRAR NO PAINEL';
       btn.style.opacity = '1';
     });
 }
@@ -148,6 +148,10 @@ function initApp() {
                 imgEl.src = dataUrl;
                 imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
                 previewContainer.appendChild(imgEl);
+            }
+            // Manter compatibilidade com rotinas que pedem uma única imagem de base
+            if(document.getElementById('fImgBase64')) {
+                document.getElementById('fImgBase64').value = dataUrl;
             }
           }
           img.src = event.target.result;
@@ -301,7 +305,7 @@ function openProductForm(id = null, isDraft = false) {
   editingId = id;
   const p = id ? (isDraft ? draftProducts.find(x=>x.id===id) : products.find(x=>x.id===id)) : null;
   
-  document.getElementById('prodModalTitle').textContent = p ? (isDraft ? 'Ativar Importado do Instagram' : 'Editar Produto') : 'Novo Produto';
+  document.getElementById('prodModalTitle').textContent = p ? (isDraft ? 'Ativar Importado' : 'Editar Produto') : 'Novo Produto';
   document.getElementById('fNome').value = p?.name || '';
   document.getElementById('fCat').value = p?.category || '';
   document.getElementById('fCusto').value = p?.cost || '';
@@ -312,7 +316,9 @@ function openProductForm(id = null, isDraft = false) {
   document.getElementById('fChanSite').checked = p ? (p.channelSite !== false) : true;
   document.getElementById('fChanShopee').checked = p ? (p.channelShopee === true) : false;
   
-  document.getElementById('fImgFile').value = '';
+  if(document.getElementById('fImgFile')) document.getElementById('fImgFile').value = '';
+  if(document.getElementById('fImgBase64')) document.getElementById('fImgBase64').value = p?.img || '';
+  
   const previewContainer = document.getElementById('imgPreviewContainer');
   if(previewContainer) previewContainer.innerHTML = '';
   
@@ -325,6 +331,12 @@ function openProductForm(id = null, isDraft = false) {
         previewContainer.appendChild(imgEl);
     }
   });
+
+  const mainPreview = document.getElementById('imgPreview');
+  if(mainPreview) {
+      mainPreview.src = p?.img || '';
+      mainPreview.style.display = p?.img ? 'block' : 'none';
+  }
 
   document.getElementById('prodModal').classList.add('show');
 }
@@ -340,6 +352,10 @@ async function saveProduct() {
   if (!name) return alert("Nome é obrigatório.");
   if (!cat) return alert("Categoria é obrigatória.");
   
+  // Garantir que a primeira imagem (ou única) não se perca se não for feito novo upload
+  const imgBase64 = document.getElementById('fImgBase64') ? document.getElementById('fImgBase64').value : '';
+  const finalImages = uploadedImages.length > 0 ? uploadedImages : (imgBase64 ? [imgBase64] : []);
+  
   const data = {
     name,
     category: cat,
@@ -348,8 +364,8 @@ async function saveProduct() {
     stock: stock,
     sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()),
     desc: document.getElementById('fDesc').value,
-    images: uploadedImages,
-    img: uploadedImages.length > 0 ? uploadedImages[0] : "",
+    images: finalImages,
+    img: finalImages.length > 0 ? finalImages[0] : "",
     channelSite: document.getElementById('fChanSite').checked,
     channelShopee: document.getElementById('fChanShopee').checked,
     channelPdv: true,
@@ -600,13 +616,18 @@ function previewIgImage(event) {
   if (!file) return;
   handleImageUpload(file, null, null, (dataUrl) => {
     igImageBase64 = dataUrl;
-    document.getElementById('igImagePreview').src = dataUrl;
-    document.getElementById('igImagePreview').style.display = 'block';
+    const igPreview = document.getElementById('igImagePreview');
+    if(igPreview) {
+        igPreview.src = dataUrl;
+        igPreview.style.display = 'block';
+    }
   });
 }
 
 async function analyzeInstagram() {
-  const caption = document.getElementById('igCaption').value.trim();
+  const captionEl = document.getElementById('igCaption');
+  if(!captionEl) return;
+  const caption = captionEl.value.trim();
   if (!caption && !igImageBase64) {
     alert('Cole a legenda do Instagram ou adicione uma foto do produto.');
     return;
@@ -735,19 +756,28 @@ async function publishIgProduct() {
 }
 
 function copyIgCaption() {
-  const text = document.getElementById('igGeneratedCaption').textContent;
-  navigator.clipboard.writeText(text).then(() => alert('Legenda copiada!'));
+  const textEl = document.getElementById('igGeneratedCaption');
+  if(textEl) {
+    navigator.clipboard.writeText(textEl.textContent).then(() => alert('Legenda copiada!'));
+  }
 }
 
 function resetIg() {
   igExtractedData = null;
   igImageBase64 = null;
-  document.getElementById('igCaption').value = '';
-  document.getElementById('igImageFile').value = '';
-  document.getElementById('igImagePreview').style.display = 'none';
-  document.getElementById('igStep1').style.display = 'block';
-  document.getElementById('igStep2').style.display = 'none';
-  document.getElementById('igLoading').style.display = 'none';
+  const captionEl = document.getElementById('igCaption');
+  if(captionEl) captionEl.value = '';
+  const imgFileEl = document.getElementById('igImageFile');
+  if(imgFileEl) imgFileEl.value = '';
+  const imgPreviewEl = document.getElementById('igImagePreview');
+  if(imgPreviewEl) imgPreviewEl.style.display = 'none';
+  
+  const step1 = document.getElementById('igStep1');
+  if(step1) step1.style.display = 'block';
+  const step2 = document.getElementById('igStep2');
+  if(step2) step2.style.display = 'none';
+  const loading = document.getElementById('igLoading');
+  if(loading) loading.style.display = 'none';
 }
 
 // ==========================================
