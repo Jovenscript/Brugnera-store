@@ -10,38 +10,185 @@ const firebaseConfig = {
   appId: "1:681004488105:web:530cb3f50e0980a19420b8"
 };
 
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 // ==========================================
-// ESTADOS GLOBAIS
+// EMAILS AUTORIZADOS COMO ADMIN
 // ==========================================
+const ADMIN_EMAILS = [
+  'admin@brugnerastore.com.br'
+];
+
+// ESTADOS GLOBAIS
 let products = [];
+let draftProducts = []; 
 let orders = [];
 let pdvCart = [];
 let editingId = null;
 let currentAiType = 'legenda';
-let stockLog = JSON.parse(localStorage.getItem('lumina_stocklog') || '[]'); 
-let uploadedImages = []; // Array das múltiplas fotos
+let stockLog = JSON.parse(localStorage.getItem('brugnera_stocklog') || '[]');
+let igExtractedData = null;
+let igImageBase64 = null;
+let uploadedImages = []; // Array das múltiplas fotos (Etapa 2)
 
 // ==========================================
-// ESCUTAR BANCO DE DADOS EM TEMPO REAL
+// AUTENTICAÇÃO — GUARD DO ADMIN
 // ==========================================
-db.collection("products").onSnapshot((snapshot) => {
-  products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  updateCategoryLists(); // Atualiza as categorias automaticamente
-  renderProdTable();
-  renderPDVGrid();
-  renderEstoque();
-  updateAiSelect();
-  calculateDashboard();
+auth.onAuthStateChanged((user) => {
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    const guardEl = document.getElementById('authGuard');
+    if(guardEl) guardEl.style.display = 'none';
+    initApp();
+  } else if (user) {
+    showGuardError('Esta conta não tem acesso ao painel administrativo.');
+    auth.signOut();
+  } else {
+    const guardEl = document.getElementById('authGuard');
+    if(guardEl) guardEl.style.display = 'flex';
+  }
 });
 
-db.collection("orders").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
-  orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  renderOrders();
-  calculateDashboard();
-});
+function guardLogin() {
+  const email = document.getElementById('guardEmail').value.trim();
+  const pass = document.getElementById('guardPass').value;
+  const btn = document.getElementById('guardBtn');
+
+  if (!email || !pass) { showGuardError('Preencha e-mail e senha.'); return; }
+
+  btn.textContent = 'Entrando...';
+  btn.style.opacity = '0.7';
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .then((cred) => {
+      if (!ADMIN_EMAILS.includes(cred.user.email)) {
+        auth.signOut();
+        showGuardError('Este e-mail não tem permissão de administrador.');
+        btn.textContent = 'ENTRAR';
+        btn.style.opacity = '1';
+      }
+    })
+    .catch((err) => {
+      showGuardError('E-mail ou senha incorretos. Tente novamente.');
+      btn.textContent = 'ENTRAR';
+      btn.style.opacity = '1';
+    });
+}
+
+function showGuardError(msg) {
+  const el = document.getElementById('guardError');
+  if(el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function adminLogout() {
+  if (confirm('Tem certeza que deseja sair do painel?')) {
+    auth.signOut();
+  }
+}
+
+// ==========================================
+// INIT E BANCO DE DADOS
+// ==========================================
+function initApp() {
+  db.collection("products").onSnapshot((snapshot) => {
+    const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Separa os produtos reais dos rascunhos da Automação Make
+    products = allProducts.filter(p => p.status !== 'rascunho');
+    draftProducts = allProducts.filter(p => p.status === 'rascunho');
+
+    updateCategoryLists(); // Atualiza categorias dinâmicas (Etapa 2)
+    renderProdTable();
+    renderDraftTable(); 
+    updateDraftBadge(); 
+    renderPDVGrid();
+    renderEstoque();
+    updateAiSelect();
+    calculateDashboard();
+  });
+
+  db.collection("orders").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+    orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderOrders();
+    calculateDashboard();
+  });
+
+  // UPLOAD DE MÚLTIPLAS IMAGENS (Etapa 2)
+  const fileInput = document.getElementById('fImgFile');
+  if(fileInput) {
+    fileInput.addEventListener('change', function(e) {
+      const files = e.target.files;
+      if(!files.length) return;
+      
+      uploadedImages = []; 
+      const previewContainer = document.getElementById('imgPreviewContainer');
+      if(previewContainer) previewContainer.innerHTML = ''; 
+      
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            let scaleSize = 800 / img.width; 
+            if (scaleSize > 1) scaleSize = 1;
+            canvas.width = img.width * scaleSize;
+            canvas.height = img.height * scaleSize;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            
+            uploadedImages.push(dataUrl); 
+            
+            if(previewContainer) {
+                const imgEl = document.createElement('img');
+                imgEl.src = dataUrl;
+                imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
+                previewContainer.appendChild(imgEl);
+            }
+          }
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+  }
+
+  const dateBadge = document.getElementById('dateBadge');
+  if(dateBadge) dateBadge.textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long'});
+}
+
+// ==========================================
+// UTILITÁRIO DE IMAGEM (Instagram)
+// ==========================================
+function handleImageUpload(file, base64FieldId, previewId, callback) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      let scaleSize = 500 / img.width;
+      if (scaleSize > 1) scaleSize = 1;
+      canvas.width = img.width * scaleSize;
+      canvas.height = img.height * scaleSize;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      if (base64FieldId) {
+        document.getElementById(base64FieldId).value = dataUrl;
+        document.getElementById(previewId).src = dataUrl;
+        document.getElementById(previewId).style.display = 'block';
+      }
+      if (callback) callback(dataUrl);
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 
 // ==========================================
 // NAVEGAÇÃO E CATEGORIAS DINÂMICAS
@@ -49,66 +196,60 @@ db.collection("orders").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1)).classList.add('active');
-  el.classList.add('active');
-  const titles = {dashboard:'Dashboard', pdv:'Frente de Caixa (PDV)', pedidos:'Gestão de Pedidos', produtos:'Produtos', estoque:'Controle de Estoque', ia:'Gerador de Marketing IA'};
-  document.getElementById('pageTitle').textContent = titles[name] || name;
+  
+  const pageEl = document.getElementById('page' + name.charAt(0).toUpperCase() + name.slice(1));
+  if(pageEl) pageEl.classList.add('active');
+  if(el) el.classList.add('active');
+  
+  const titles = {
+    dashboard: 'Dashboard',
+    pdv: 'Frente de Caixa (PDV)',
+    pedidos: 'Gestão de Pedidos',
+    produtos: 'Produtos Ativos',
+    importados: 'Rascunhos do Make',
+    estoque: 'Controle de Estoque',
+    instagram: '📸 Instagram → Site',
+    ia: 'Gerador de Marketing IA'
+  };
+  const titleEl = document.getElementById('pageTitle');
+  if(titleEl) titleEl.textContent = titles[name] || name;
+}
+
+function updateDraftBadge() {
+  const badge = document.getElementById('badgeInsta');
+  const mainDot = document.getElementById('mainNotifDot');
+  if(badge && mainDot) {
+    if(draftProducts.length > 0) {
+      badge.textContent = draftProducts.length;
+      badge.style.display = 'inline-block';
+      mainDot.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+      mainDot.style.display = 'none';
+    }
+  }
 }
 
 function updateCategoryLists() {
   const categories = [...new Set(products.map(p => p.category))].filter(Boolean);
   const datalist = document.getElementById('catList');
   if(datalist) datalist.innerHTML = categories.map(cat => `<option value="${cat}">`).join('');
+  
   const filterSelect = document.getElementById('prodCatFilter');
   if(filterSelect) filterSelect.innerHTML = `<option value="">Todas categorias</option>` + categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
 }
-
-// UPLOAD DE MÚLTIPLAS IMAGENS (Para o Carrossel)
-document.getElementById('fImgFile').addEventListener('change', function(e) {
-  const files = e.target.files;
-  if(!files.length) return;
-  
-  uploadedImages = []; 
-  document.getElementById('imgPreviewContainer').innerHTML = ''; 
-  
-  Array.from(files).forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        let scaleSize = 800 / img.width; 
-        if (scaleSize > 1) scaleSize = 1;
-        canvas.width = img.width * scaleSize;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
-        
-        uploadedImages.push(dataUrl); 
-        
-        const imgEl = document.createElement('img');
-        imgEl.src = dataUrl;
-        imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
-        document.getElementById('imgPreviewContainer').appendChild(imgEl);
-      }
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-});
 
 // ==========================================
 // PRODUTOS
 // ==========================================
 function renderProdTable() {
   const search = document.getElementById('prodSearch').value.toLowerCase();
-  const cat = document.getElementById('prodCatFilter').value;
+  const cat = document.getElementById('prodCatFilter')?.value || '';
   const tbody = document.getElementById('prodTableBody');
-  
-  const filtered = products.filter(p => (!search || p.name.toLowerCase().includes(search)) && (!cat || p.category === cat));
+  if(!tbody) return;
 
-  if(filtered.length === 0) {
+  const filtered = products.filter(p => (!search || p.name.toLowerCase().includes(search)) && (!cat || p.category === cat));
+  if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text2)">Nenhum produto encontrado.</td></tr>';
     return;
   }
@@ -130,12 +271,37 @@ function renderProdTable() {
   `}).join('');
 }
 
+function renderDraftTable() {
+  const tbody = document.getElementById('draftTableBody');
+  if(!tbody) return;
+
+  if(draftProducts.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text2)">Nenhum produto importado pendente.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = draftProducts.map(p => {
+    const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
+    return `
+    <tr>
+      <td><img src="${mainImg}" style="width:40px;height:50px;object-fit:cover;border-radius:4px; border:2px solid var(--rose);"></td>
+      <td><strong>${p.name}</strong><br><small style="color:var(--text2)">Via Make.com</small></td>
+      <td>R$ ${(p.price||0).toFixed(2).replace('.',',')}</td>
+      <td><span class="status-badge rascunho">Sem Estoque</span></td>
+      <td style="display:flex;gap:6px;padding:14px 16px">
+        <button class="btn btn-gold btn-sm" onclick="activateDraft('${p.id}')">Adicionar Estoque e Ativar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Descartar</button>
+      </td>
+    </tr>
+  `}).join('');
+}
+
 function filterProdTable() { renderProdTable(); }
 
-function openProductForm(id = null) {
+function openProductForm(id = null, isDraft = false) {
   editingId = id;
-  const p = id ? products.find(x => x.id === id) : null;
-  document.getElementById('prodModalTitle').textContent = p ? 'Editar Produto' : 'Novo Produto';
+  const p = id ? (isDraft ? draftProducts.find(x=>x.id===id) : products.find(x=>x.id===id)) : null;
+  
+  document.getElementById('prodModalTitle').textContent = p ? (isDraft ? 'Ativar Importado do Instagram' : 'Editar Produto') : 'Novo Produto';
   document.getElementById('fNome').value = p?.name || '';
   document.getElementById('fCat').value = p?.category || '';
   document.getElementById('fCusto').value = p?.cost || '';
@@ -143,19 +309,21 @@ function openProductForm(id = null) {
   document.getElementById('fEstoque').value = p?.stock || '';
   document.getElementById('fTamanhos').value = p?.sizes?.join(',') || 'P,M,G';
   document.getElementById('fDesc').value = p?.desc || '';
-  
   document.getElementById('fChanSite').checked = p ? (p.channelSite !== false) : true;
   document.getElementById('fChanShopee').checked = p ? (p.channelShopee === true) : false;
-
+  
   document.getElementById('fImgFile').value = '';
-  document.getElementById('imgPreviewContainer').innerHTML = '';
+  const previewContainer = document.getElementById('imgPreviewContainer');
+  if(previewContainer) previewContainer.innerHTML = '';
   
   uploadedImages = p?.images || (p?.img ? [p.img] : []);
   uploadedImages.forEach(imgData => {
-    const imgEl = document.createElement('img');
-    imgEl.src = imgData;
-    imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
-    document.getElementById('imgPreviewContainer').appendChild(imgEl);
+    if(previewContainer) {
+        const imgEl = document.createElement('img');
+        imgEl.src = imgData;
+        imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
+        previewContainer.appendChild(imgEl);
+    }
   });
 
   document.getElementById('prodModal').classList.add('show');
@@ -163,37 +331,41 @@ function openProductForm(id = null) {
 
 function closeProdModal() { document.getElementById('prodModal').classList.remove('show'); }
 
+function activateDraft(id) { openProductForm(id, true); }
+
 async function saveProduct() {
   const name = document.getElementById('fNome').value.trim();
+  const stock = parseInt(document.getElementById('fEstoque').value) || 0;
   const cat = document.getElementById('fCat').value.trim();
-  if(!name) return alert("Nome é obrigatório.");
-  if(!cat) return alert("Categoria é obrigatória.");
+  if (!name) return alert("Nome é obrigatório.");
+  if (!cat) return alert("Categoria é obrigatória.");
   
   const data = {
     name,
     category: cat,
     cost: parseFloat(document.getElementById('fCusto').value) || 0,
     price: parseFloat(document.getElementById('fPreco').value) || 0,
-    stock: parseInt(document.getElementById('fEstoque').value) || 0,
-    sizes: document.getElementById('fTamanhos').value.split(',').map(s=>s.trim()),
+    stock: stock,
+    sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()),
     desc: document.getElementById('fDesc').value,
-    images: uploadedImages, 
-    img: uploadedImages.length > 0 ? uploadedImages[0] : "", 
+    images: uploadedImages,
+    img: uploadedImages.length > 0 ? uploadedImages[0] : "",
     channelSite: document.getElementById('fChanSite').checked,
     channelShopee: document.getElementById('fChanShopee').checked,
-    channelPdv: true, 
-    active: true
+    channelPdv: true,
+    active: true,
+    status: 'ativo'
   };
-
+  
   try {
     document.getElementById('btnSalvarProd').textContent = "Salvando...";
-    if(editingId) {
+    if (editingId) {
       await db.collection("products").doc(editingId).update(data);
     } else {
       await db.collection("products").add(data);
-      if(data.stock > 0) {
-        stockLog.unshift({date:new Date().toLocaleDateString('pt-BR'), product:name, type:'entrada', qty:data.stock, user:'Admin'});
-        localStorage.setItem('lumina_stocklog', JSON.stringify(stockLog));
+      if (data.stock > 0) {
+        stockLog.unshift({date: new Date().toLocaleDateString('pt-BR'), product: name, type: 'entrada', qty: data.stock, user: 'Admin'});
+        localStorage.setItem('brugnera_stocklog', JSON.stringify(stockLog));
       }
     }
     closeProdModal();
@@ -204,34 +376,35 @@ async function saveProduct() {
   }
 }
 
-function editProduct(id) { openProductForm(id); }
+function editProduct(id) { openProductForm(id, false); }
 
 async function deleteProduct(id) {
-  if(confirm("Tem certeza que deseja excluir este produto de todos os canais (Site, PDV e Nuvem)?")) {
+  if (confirm("Tem certeza que deseja excluir?")) {
     await db.collection("products").doc(id).delete();
   }
 }
 
 function exportCSV() {
-  if(products.length === 0) return alert("Nada para exportar.");
+  if (products.length === 0) return alert("Nada para exportar.");
   const headers = ['id','name','category','cost','price','stock','sizes'];
   const rows = products.map(p => headers.map(h => `"${p[h]||''}"`).join(','));
-  const csv = headers.join(',') + '\\n' + rows.join('\\n');
+  const csv = headers.join(',') + '\n' + rows.join('\n');
   const link = document.createElement("a");
   link.setAttribute("href", "data:text/csv;charset=utf-8," + encodeURI(csv));
   link.setAttribute("download", "produtos_brugnera.csv");
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
-function importCSV(e) { alert("Use o botão '+ Novo Produto' por enquanto."); e.target.value = ''; }
+function importCSV(e) { alert("Importação via CSV disponível em breve. Use '+ Novo Produto' por enquanto."); e.target.value = ''; }
 
 // ==========================================
-// PDV (FRENTE DE CAIXA)
+// PDV
 // ==========================================
 function renderPDVGrid() {
-  const search = document.getElementById('pdvSearch').value.toLowerCase();
+  const search = document.getElementById('pdvSearch')?.value.toLowerCase() || '';
   const grid = document.getElementById('pdvGrid');
+  if(!grid) return;
+
   const available = products.filter(p => p.stock > 0 && p.name.toLowerCase().includes(search));
-  
   grid.innerHTML = available.map(p => {
     const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
     return `
@@ -246,10 +419,11 @@ function renderPDVGrid() {
 
 function addToPDV(id) {
   const p = products.find(x => x.id === id);
-  if(!p || p.stock <= 0) return;
+  if (!p || p.stock <= 0) return;
   const existing = pdvCart.find(i => i.id === id);
-  if(existing) {
-    if(existing.qty < p.stock) existing.qty++; else alert("Estoque máximo atingido!");
+  if (existing) {
+    if (existing.qty < p.stock) existing.qty++;
+    else alert("Estoque máximo atingido!");
   } else {
     pdvCart.push({ id: p.id, name: p.name, price: p.price, cost: p.cost, qty: 1 });
   }
@@ -258,7 +432,9 @@ function addToPDV(id) {
 
 function updatePDVCart() {
   const container = document.getElementById('pdvCartItems');
-  if(pdvCart.length === 0) {
+  if(!container) return;
+  
+  if (pdvCart.length === 0) {
     container.innerHTML = "Nenhum item adicionado.";
     document.getElementById('pdvTotal').textContent = "R$ 0,00";
     return;
@@ -278,31 +454,30 @@ function updatePDVCart() {
 }
 
 async function finishPDV() {
-  if(pdvCart.length === 0) return alert("Carrinho vazio!");
-  
+  if (pdvCart.length === 0) return alert("Carrinho vazio!");
   const total = pdvCart.reduce((acc, i) => acc + (i.price * i.qty), 0);
   const totalCost = pdvCart.reduce((acc, i) => acc + (i.cost * i.qty), 0);
   const payment = document.getElementById('pdvPayment').value;
-
+  
   const orderData = {
     origin: "Loja Física",
     client: "Cliente Balcão",
     items: pdvCart.map(i => `${i.qty}x ${i.name}`).join(', '),
     value: total,
     cost: totalCost,
-    payment: payment,
+    payment,
     status: "pago",
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     dateStr: new Date().toLocaleString('pt-BR')
   };
-
+  
   try {
     await db.collection("orders").add(orderData);
-    for(let item of pdvCart) {
+    for (let item of pdvCart) {
       const p = products.find(x => x.id === item.id);
       await db.collection("products").doc(item.id).update({ stock: p.stock - item.qty });
     }
-    alert("Venda registrada com sucesso! Estoque atualizado.");
+    alert("✅ Venda registrada! Estoque atualizado.");
     pdvCart = [];
     updatePDVCart();
   } catch(e) {
@@ -311,7 +486,7 @@ async function finishPDV() {
 }
 
 // ==========================================
-// PEDIDOS & DASHBOARD 
+// PEDIDOS & DASHBOARD
 // ==========================================
 function renderOrders() {
   const tbody = document.getElementById('ordersTableBody');
@@ -332,20 +507,21 @@ function renderOrders() {
           <option value="pendente" ${o.status==='pendente'?'selected':''}>Pendente</option>
           <option value="pago" ${o.status==='pago'?'selected':''}>Pago</option>
           <option value="enviado" ${o.status==='enviado'?'selected':''}>Enviado</option>
+          <option value="entregue" ${o.status==='entregue'?'selected':''}>Entregue</option>
         </select>
       </td>
     </tr>
   `});
   
-  tbody.innerHTML = html.join('') || '<tr><td colspan="7" style="text-align:center">Nenhum pedido ainda.</td></tr>';
-  recent.innerHTML = orders.slice(0,5).map(o => `<tr><td>${o.origin==='Loja Física'?'🏬':'🛍️'} ${o.origin}</td><td>${o.client}</td><td style="color:var(--gold)">R$ ${o.value.toFixed(2)}</td><td>${o.payment}</td><td><span class="status-badge pago">${o.status}</span></td></tr>`).join('');
+  if(tbody) tbody.innerHTML = html.join('') || '<tr><td colspan="7" style="text-align:center">Nenhum pedido ainda.</td></tr>';
+  if(recent) recent.innerHTML = orders.slice(0,5).map(o => `<tr><td>${o.origin==='Loja Física'?'🏬':'🛍️'} ${o.origin}</td><td>${o.client}</td><td style="color:var(--gold)">R$ ${(o.value||0).toFixed(2)}</td><td>${o.payment}</td><td><span class="status-badge pago">${o.status}</span></td></tr>`).join('');
   
-  // Render Fake Charts
-  document.getElementById('salesChart').innerHTML = [0,1,2,3,4,5,6].map(d => `<div class="bar-wrap"><div class="bar" style="height:${Math.floor(Math.random()*60)+20}px"></div></div>`).join('');
+  const salesChart = document.getElementById('salesChart');
+  if(salesChart) salesChart.innerHTML = [0,1,2,3,4,5,6].map(d => `<div class="bar-wrap"><div class="bar" style="height:${Math.floor(Math.random()*60)+20}px"></div></div>`).join('');
 }
 
 function filterOrders(status, btn) {
-  document.querySelectorAll('.order-filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.order-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
 
@@ -355,44 +531,48 @@ async function updateOrderStatus(id, status) {
 
 function calculateDashboard() {
   let receita = 0; let custoTotal = 0; let vendasSite = 0; let vendasFisica = 0;
-  
   orders.forEach(o => {
     receita += (o.value || 0);
     custoTotal += (o.cost || 0);
-    if(o.origin === 'Loja Física') vendasFisica++;
+    if (o.origin === 'Loja Física') vendasFisica++;
     else vendasSite++;
   });
-
-  const lucroReal = receita - custoTotal;
-
-  document.getElementById('dashReceita').textContent = `R$ ${receita.toFixed(2).replace('.',',')}`;
-  document.getElementById('dashLucro').textContent = `R$ ${lucroReal.toFixed(2).replace('.',',')}`;
-  document.getElementById('dashSite').textContent = vendasSite;
-  document.getElementById('dashFisica').textContent = vendasFisica;
+  const dashReceita = document.getElementById('dashReceita');
+  const dashLucro = document.getElementById('dashLucro');
+  if(dashReceita) dashReceita.textContent = `R$ ${receita.toFixed(2).replace('.',',')}`;
+  if(dashLucro) dashLucro.textContent = `R$ ${(receita - custoTotal).toFixed(2).replace('.',',')}`;
+  
+  const ds = document.getElementById('dashSite');
+  const df = document.getElementById('dashFisica');
+  if(ds) ds.textContent = vendasSite;
+  if(df) df.textContent = vendasFisica;
 }
 
 // ==========================================
-// ESTOQUE 
+// ESTOQUE
 // ==========================================
 function renderEstoque() {
   const grid = document.getElementById('stockGrid');
-  if(products.length === 0) {
-    grid.innerHTML = '<p style="color:var(--text2);">Nenhum produto cadastrado.</p>';
-  } else {
-    grid.innerHTML = products.map(p => `
+  if(!grid) return;
+
+  grid.innerHTML = products.length === 0
+    ? '<p style="color:var(--text2);">Nenhum produto cadastrado.</p>'
+    : products.map(p => `
       <div class="stock-card">
         <div class="stock-card-name">${p.name}</div>
         <div class="stock-card-qty ${p.stock<=3?'low':''}">${p.stock}</div>
       </div>
     `).join('');
-  }
   
-  document.getElementById('stockLog').innerHTML = stockLog.length === 0 ? '<tr><td colspan="5" style="text-align:center">Sem registros.</td></tr>' : 
-    stockLog.slice(0,10).map(l => `<tr><td>${l.date}</td><td>${l.product}</td><td><span class="status-badge pago">${l.type}</span></td><td>${l.qty}</td><td>${l.user}</td></tr>`).join('');
+  const sLog = document.getElementById('stockLog');
+  if(sLog) sLog.innerHTML = stockLog.length === 0
+    ? '<tr><td colspan="5" style="text-align:center">Sem registros.</td></tr>'
+    : stockLog.slice(0,10).map(l => `<tr><td>${l.date}</td><td>${l.product}</td><td><span class="status-badge pago">${l.type}</span></td><td>${l.qty}</td><td>${l.user}</td></tr>`).join('');
 }
 
 function openStockEntry() {
-  document.getElementById('stkProd').innerHTML = products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  const stkProd = document.getElementById('stkProd');
+  if(stkProd) stkProd.innerHTML = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   document.getElementById('stockModal').classList.add('show');
 }
 
@@ -400,51 +580,243 @@ async function saveStockEntry() {
   const id = document.getElementById('stkProd').value;
   const qty = parseInt(document.getElementById('stkQty').value);
   const type = document.getElementById('stkType').value;
-  if(!qty) return;
-  
+  if (!qty) return;
   const p = products.find(x => x.id === id);
   const delta = type === 'saida' ? -qty : qty;
   const newStock = Math.max(0, p.stock + delta);
   
   await db.collection("products").doc(id).update({ stock: newStock });
-  
-  stockLog.unshift({date:new Date().toLocaleDateString('pt-BR'), product:p.name, type, qty:delta, user:'Admin'});
-  localStorage.setItem('lumina_stocklog', JSON.stringify(stockLog));
+  stockLog.unshift({date: new Date().toLocaleDateString('pt-BR'), product: p.name, type, qty: delta, user: 'Admin'});
+  localStorage.setItem('brugnera_stocklog', JSON.stringify(stockLog));
   document.getElementById('stockModal').classList.remove('show');
+  renderEstoque();
 }
 
 // ==========================================
-// IA MARKETING 
+// 📸 INSTAGRAM → PRODUTO (AUTOMAÇÃO CLAUDE)
+// ==========================================
+function previewIgImage(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  handleImageUpload(file, null, null, (dataUrl) => {
+    igImageBase64 = dataUrl;
+    document.getElementById('igImagePreview').src = dataUrl;
+    document.getElementById('igImagePreview').style.display = 'block';
+  });
+}
+
+async function analyzeInstagram() {
+  const caption = document.getElementById('igCaption').value.trim();
+  if (!caption && !igImageBase64) {
+    alert('Cole a legenda do Instagram ou adicione uma foto do produto.');
+    return;
+  }
+
+  document.getElementById('igStep1').style.display = 'none';
+  document.getElementById('igLoading').style.display = 'flex';
+  document.getElementById('igStep2').style.display = 'none';
+
+  try {
+    const userContent = [];
+
+    if (igImageBase64) {
+      userContent.push({
+        type: "image",
+        source: { type: "base64", media_type: "image/jpeg", data: igImageBase64.split(',')[1] }
+      });
+    }
+
+    const promptText = `Você é um assistente de uma loja de moda feminina chamada Brugnera Store.
+
+Analise ${igImageBase64 ? 'a imagem e ' : ''}a legenda do post do Instagram abaixo e extraia as informações do produto para cadastrá-lo no site da loja.
+
+Legenda do Instagram:
+"""
+${caption || '(sem legenda)'}
+"""
+
+Retorne APENAS um JSON válido (sem texto antes ou depois) com este formato:
+{
+  "nome": "Nome do produto",
+  "categoria": "vestidos|blusas|conjuntos|acessorios",
+  "preco": 0.00,
+  "tamanhos": "P,M,G",
+  "descricao": "Descrição bonita do produto para o site (2-3 frases)",
+  "legenda_otimizada": "Legenda melhorada para Instagram com emojis e hashtags relevantes (máximo 220 caracteres + hashtags)"
+}
+
+Regras:
+- Se não encontrar o preço, use 0
+- Para categoria, escolha a mais adequada entre as opções
+- Para tamanhos, use o que está na legenda ou "P,M,G" se não especificado
+- A legenda_otimizada deve ser persuasiva, com emojis no início, terminar com "Link na bio! 🔗" e incluir pelo menos 5 hashtags relevantes como #BrugneraStore #ModaFeminina`;
+
+    userContent.push({ type: "text", text: promptText });
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: userContent }]
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro na API da IA');
+
+    const data = await response.json();
+    const rawText = data.content.map(b => b.text || '').join('').trim();
+
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('Resposta da IA inválida');
+
+    igExtractedData = JSON.parse(jsonMatch[0]);
+
+    document.getElementById('igFNome').value = igExtractedData.nome || '';
+    document.getElementById('igFCat').value = igExtractedData.categoria || 'vestidos';
+    document.getElementById('igFPreco').value = igExtractedData.preco || '';
+    document.getElementById('igFTamanhos').value = igExtractedData.tamanhos || 'P,M,G';
+    document.getElementById('igFDesc').value = igExtractedData.descricao || '';
+    document.getElementById('igGeneratedCaption').textContent = igExtractedData.legenda_otimizada || '';
+    document.getElementById('igFEstoque').value = '';
+
+    document.getElementById('igLoading').style.display = 'none';
+    document.getElementById('igStep2').style.display = 'block';
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById('igLoading').style.display = 'none';
+    document.getElementById('igStep1').style.display = 'block';
+    alert('Erro ao analisar o post: ' + err.message + '\n\nVerifique sua chave da API nas configurações.');
+  }
+}
+
+async function publishIgProduct() {
+  const name = document.getElementById('igFNome').value.trim();
+  const estoque = parseInt(document.getElementById('igFEstoque').value) || 0;
+
+  if (!name) return alert('Nome do produto é obrigatório.');
+  if (estoque === 0 && !confirm('Estoque está zerado. Publicar mesmo assim?')) return;
+
+  const data = {
+    name,
+    category: document.getElementById('igFCat').value,
+    cost: 0,
+    price: parseFloat(document.getElementById('igFPreco').value) || 0,
+    stock: estoque,
+    sizes: document.getElementById('igFTamanhos').value.split(',').map(s => s.trim()),
+    desc: document.getElementById('igFDesc').value,
+    images: igImageBase64 ? [igImageBase64] : [], 
+    img: igImageBase64 || '',
+    channelSite: true,
+    channelShopee: false,
+    channelPdv: true,
+    active: true,
+    origem: 'instagram',
+    status: 'ativo'
+  };
+
+  try {
+    const btn = document.querySelector('#pageInstagram .btn-gold');
+    if (btn) btn.textContent = 'Publicando...';
+    await db.collection("products").add(data);
+
+    if (estoque > 0) {
+      stockLog.unshift({date: new Date().toLocaleDateString('pt-BR'), product: name, type: 'entrada', qty: estoque, user: 'Instagram'});
+      localStorage.setItem('brugnera_stocklog', JSON.stringify(stockLog));
+    }
+
+    alert(`✅ "${name}" publicado no site com sucesso!`);
+    resetIg();
+  } catch(e) {
+    alert('Erro ao publicar: ' + e.message);
+  }
+}
+
+function copyIgCaption() {
+  const text = document.getElementById('igGeneratedCaption').textContent;
+  navigator.clipboard.writeText(text).then(() => alert('Legenda copiada!'));
+}
+
+function resetIg() {
+  igExtractedData = null;
+  igImageBase64 = null;
+  document.getElementById('igCaption').value = '';
+  document.getElementById('igImageFile').value = '';
+  document.getElementById('igImagePreview').style.display = 'none';
+  document.getElementById('igStep1').style.display = 'block';
+  document.getElementById('igStep2').style.display = 'none';
+  document.getElementById('igLoading').style.display = 'none';
+}
+
+// ==========================================
+// 🤖 IA MARKETING
 // ==========================================
 function updateAiSelect() {
-  document.getElementById('aiProdSelect').innerHTML = products.length === 0 ? '<option>Cadastre produtos primeiro</option>' : products.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  const sel = document.getElementById('aiProdSelect');
+  if(!sel) return;
+  sel.innerHTML = products.length === 0
+    ? '<option value="">Cadastre produtos primeiro</option>'
+    : '<option value="">— Selecione um produto —</option>' + products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
 }
 
 function setAiType(type, el) {
   currentAiType = type;
-  document.querySelectorAll('.ai-type-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.ai-type-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
 }
 
-function generateAI() {
-  const prod = document.getElementById('aiProdSelect').value;
-  if(!prod || products.length === 0) return alert("Selecione um produto.");
-  
+async function generateAI() {
+  const prodId = document.getElementById('aiProdSelect').value;
+  if (!prodId) return alert("Selecione um produto.");
+  const prod = products.find(p => p.id === prodId);
+  if (!prod) return;
+
   document.getElementById('aiLoading').classList.add('show');
   document.getElementById('aiResultArea').style.display = 'none';
 
-  setTimeout(() => {
-    let result = "";
-    if(currentAiType === 'legenda') result = `✨ Exclusividade que fala por si.\nO ${prod} chegou para elevar o seu estilo. Corre pro site antes que acabe! #ModaFeminina #BrugneraStore`;
-    else if(currentAiType === 'shopee') result = `[ORIGINAL] ${prod} - Moda Feminina Premium.\n\nGaranta já o seu ${prod}. Tecido de alta qualidade, costura reforçada. Envio imediato para todo o Brasil.`;
-    else if(currentAiType === 'relatorio') result = `📊 IA Analisou: O produto ${prod} tem tido boa aceitação. A margem de lucro está excelente. Sugiro criar um combo com acessórios para aumentar o ticket médio.`;
-    else result = `📱 Ideia de Story: Mostre os detalhes do ${prod} em vídeo com uma música em alta no Instagram.`;
+  const prompts = {
+    legenda: `Crie uma legenda para o Instagram para vender o produto "${prod.name}" da loja Brugnera Store (moda feminina premium). Categoria: ${prod.category}. Preço: R$ ${prod.price.toFixed(2)}. Tamanhos: ${prod.sizes?.join(', ')}. Descrição: ${prod.desc || 'produto de moda feminina'}. Seja criativa, use emojis, crie urgência, termine com "Link na bio! 🔗" e coloque 7-10 hashtags relevantes. Máximo 280 caracteres + hashtags.`,
+    shopee: `Crie uma descrição de produto para a Shopee para: "${prod.name}". Categoria: ${prod.category}. Preço: R$ ${prod.price.toFixed(2)}. Tamanhos: ${prod.sizes?.join(', ')}. ${prod.desc || ''}. Inclua: título chamativo, descrição detalhada de tecido/caimento, tabela de tamanhos, informações de envio, aviso sobre cor (pode variar conforme tela). Seja persuasiva e profissional.`,
+    stories: `Crie um roteiro de Stories do Instagram para divulgar "${prod.name}" da loja Brugnera Store. Preço: R$ ${prod.price.toFixed(2)}. Inclua: 1) Tela de abertura impactante 2) Apresentação do produto 3) Detalhes e diferenciais 4) CTA para o link na bio. Para cada tela, diga o texto na tela, a música/som sugerido e uma instrução de criação. Seja dinâmica e use tendências do Instagram.`,
+    relatorio: `Analise os dados desta loja de moda feminina e gere insights de marketing:
+Produtos cadastrados: ${products.length}
+Produtos com estoque baixo (≤3): ${products.filter(p => p.stock <= 3).length}
+Total de pedidos: ${orders.length}
+Faturamento: R$ ${orders.reduce((a,o)=>a+(o.value||0),0).toFixed(2)}
+Pedidos online: ${orders.filter(o=>o.origin!=='Loja Física').length}
+Pedidos físicos: ${orders.filter(o=>o.origin==='Loja Física').length}
+
+Gere: 3 insights de performance, 3 sugestões de ação imediata para aumentar vendas, 1 ideia de campanha de marketing para o próximo mês. Use emojis e seja direta e prática.`
+  };
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompts[currentAiType] }]
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro na API');
+    const data = await response.json();
+    const result = data.content.map(b => b.text || '').join('').trim();
 
     document.getElementById('tabResultado').textContent = result;
     document.getElementById('aiResultArea').style.display = 'block';
+  } catch(err) {
+    document.getElementById('tabResultado').textContent = '❌ Erro ao gerar conteúdo: ' + err.message;
+    document.getElementById('aiResultArea').style.display = 'block';
+  } finally {
     document.getElementById('aiLoading').classList.remove('show');
-  }, 1500);
+  }
 }
 
-// INIT
-document.getElementById('dateBadge').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long',day:'2-digit',month:'long'});
+function copyAiResult() {
+  const text = document.getElementById('tabResultado').textContent;
+  navigator.clipboard.writeText(text).then(() => alert('Copiado!'));
+}
