@@ -22,6 +22,12 @@ let cart = JSON.parse(localStorage.getItem('brugnera_cart') || '[]');
 let currentProduct = null;
 let selectedSize = null;
 
+// LÓGICA DO CARROSSEL
+let currentCarouselIndex = 0;
+let carouselImagesArray = [];
+let touchstartX = 0;
+let touchendX = 0;
+
 // Variáveis para o Checkout com Frete
 let cartSubtotalValue = 0;
 let cartShippingValue = 0;
@@ -45,8 +51,29 @@ db.collection("products")
   .where("channelSite", "==", true)
   .onSnapshot((snapshot) => {
     onlineProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderFilters(); // <--- ETAPA 2: CHAMA A CRIAÇÃO DOS BOTÕES
     renderProducts(onlineProducts);
 });
+
+// ==========================================
+// CATEGORIAS DINÂMICAS (ETAPA 2)
+// ==========================================
+function renderFilters() {
+  const filtersDiv = document.getElementById('dynamicFilters');
+  const availableProducts = onlineProducts.filter(p => p.stock > 0);
+  const categories = [...new Set(availableProducts.map(p => p.category))].filter(Boolean);
+  
+  if (categories.length === 0) {
+    filtersDiv.innerHTML = '<p style="color:var(--gray); font-size:0.8rem;">Nenhuma coleção disponível no momento.</p>';
+    return;
+  }
+
+  let html = `<button class="filter-btn active" onclick="filterProducts('all', this)">Tudo</button>`;
+  categories.forEach(cat => {
+    html += `<button class="filter-btn" onclick="filterProducts('${cat}', this)">${cat}</button>`;
+  });
+  filtersDiv.innerHTML = html;
+}
 
 // ==========================================
 // RENDERIZAÇÃO DA VITRINE
@@ -54,7 +81,9 @@ db.collection("products")
 function renderProducts(list) {
   const grid = document.getElementById('productsGrid');
   
-  if (list.length === 0) {
+  const inStockList = list.filter(p => p.stock > 0);
+  
+  if (inStockList.length === 0) {
     grid.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: white; border: 1px solid var(--border);">
         <h3 style="font-family:'Playfair Display', serif; font-size: 2rem; color: var(--gold); margin-bottom: 16px;">Coleção em Construção</h3>
@@ -64,29 +93,31 @@ function renderProducts(list) {
     return;
   }
 
-  grid.innerHTML = list.map(p => `
+  grid.innerHTML = inStockList.map(p => {
+    const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
+    return `
     <article class="product-card">
       <div class="product-img-wrap" onclick="openProductModal('${p.id}')">
-        <img src="${p.img}" alt="${p.name}" loading="lazy">
+        <img src="${mainImg}" alt="${p.name}" loading="lazy">
         <button class="product-quick-add">Adicionar ao Carrinho</button>
       </div>
       <div class="product-info">
         <h3>${p.name}</h3>
         <div class="price">R$ ${p.price.toFixed(2).replace('.',',')}</div>
-        ${p.stock <= 3 ? `<div class="stock-alert">⚠️ Últimas ${p.stock} unidades!</div>` : `<div class="stock-alert" style="color:var(--gray)">Disponível</div>`}
+        <div style="font-size:0.7rem; color:var(--gray); margin-top:4px;">💳 Em até 3x sem juros</div> ${p.stock <= 3 ? `<div class="stock-alert">⚠️ Últimas ${p.stock} unidades!</div>` : ``}
       </div>
     </article>
-  `).join('');
+  `}).join('');
 }
 
 function filterProducts(cat, btn) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#dynamicFilters .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderProducts(cat === 'all' ? onlineProducts : onlineProducts.filter(p => p.category === cat));
 }
 
 // ==========================================
-// MODAL DE PRODUTO
+// MODAL TELA CHEIA E CARROSSEL COM EFEITO GHOST
 // ==========================================
 function openProductModal(id) {
   const p = onlineProducts.find(x => x.id === id);
@@ -95,7 +126,11 @@ function openProductModal(id) {
   currentProduct = p; 
   selectedSize = null;
   
-  document.getElementById('modalImg').src = p.img;
+  carouselImagesArray = p.images && p.images.length > 0 ? p.images : (p.img ? [p.img] : []);
+  currentCarouselIndex = 0;
+  
+  renderCarousel();
+
   document.getElementById('modalName').textContent = p.name;
   document.getElementById('modalPrice').textContent = `R$ ${p.price.toFixed(2).replace('.',',')}`;
   
@@ -110,6 +145,45 @@ function openProductModal(id) {
   document.getElementById('prodOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
+
+function renderCarousel() {
+  const container = document.getElementById('carouselContainer');
+  const dots = document.getElementById('carouselDots');
+  
+  container.innerHTML = carouselImagesArray.map((img, index) => `
+    <img src="${img}" class="carousel-img ${index === currentCarouselIndex ? 'active' : ''}">
+  `).join('');
+  
+  dots.innerHTML = carouselImagesArray.map((_, index) => `
+    <div class="dot ${index === currentCarouselIndex ? 'active' : ''}" onclick="goToImage(event, ${index})"></div>
+  `).join('');
+}
+
+function nextImage(e) {
+  if(e) e.stopPropagation();
+  currentCarouselIndex = (currentCarouselIndex + 1) % carouselImagesArray.length;
+  renderCarousel();
+}
+
+function prevImage(e) {
+  if(e) e.stopPropagation();
+  currentCarouselIndex = (currentCarouselIndex - 1 + carouselImagesArray.length) % carouselImagesArray.length;
+  renderCarousel();
+}
+
+function goToImage(e, index) {
+  if(e) e.stopPropagation();
+  currentCarouselIndex = index;
+  renderCarousel();
+}
+
+const slider = document.getElementById('carouselArea');
+slider.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
+slider.addEventListener('touchend', e => { 
+  touchendX = e.changedTouches[0].screenX; 
+  if (touchendX < touchstartX - 40) nextImage(); 
+  if (touchendX > touchstartX + 40) prevImage(); 
+}, {passive: true});
 
 function selectSize(size, btn) {
   selectedSize = size;
@@ -127,7 +201,7 @@ function closeProdModal() {
 function handleProdClick(e) { if (e.target === document.getElementById('prodOverlay')) closeProdModal(); }
 
 // ==========================================
-// CARRINHO DE COMPRAS
+// CARRINHO DE COMPRAS E FRETE
 // ==========================================
 function saveCart() { localStorage.setItem('brugnera_cart', JSON.stringify(cart)); updateCartUI(); }
 
@@ -144,7 +218,8 @@ function addToCartFromModal() {
       return showToast('Estoque máximo atingido!');
     }
   } else {
-    cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: currentProduct.img, size: selectedSize, qty: 1 });
+    const cartImg = currentProduct.images && currentProduct.images.length > 0 ? currentProduct.images[0] : (currentProduct.img || '');
+    cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: cartImg, size: selectedSize, qty: 1 });
   }
   
   saveCart();
@@ -198,13 +273,9 @@ function changeQty(id, size, delta) {
 function toggleCart() { document.getElementById('cartOverlay').classList.toggle('open'); }
 function handleCartClick(e) { if (e.target === document.getElementById('cartOverlay')) toggleCart(); }
 
-// ==========================================
-// CHECKOUT, CEP E ENVIO PARA O FIREBASE
-// ==========================================
 function openCheckoutModal() {
   if (cart.length === 0) { showToast('Adicione produtos ao carrinho primeiro.'); return; }
   
-  // Limpar formulário e valores anteriores
   cartShippingValue = 0;
   selectedShippingName = "";
   document.getElementById('shippingSection').style.display = 'none';
@@ -215,7 +286,6 @@ function openCheckoutModal() {
 }
 
 function atualizarTotalCheckout() {
-  // Aplica desconto se for Pix (Apenas no subtotal dos produtos)
   let subtotal = cartSubtotalValue;
   const paymentMethod = document.getElementById('clientPayment').value;
   if(paymentMethod === 'Pix') {
@@ -229,7 +299,6 @@ function atualizarTotalCheckout() {
   document.getElementById('chkTotalVal').textContent = cartTotalValue.toFixed(2).replace('.',',');
 }
 
-// Buscar Endereço Automaticamente (ViaCEP API)
 function buscarCEP(cep) {
   const cepLimpo = cep.replace(/\D/g, '');
   if (cepLimpo.length === 8) {
@@ -243,13 +312,11 @@ function buscarCEP(cep) {
           showToast('CEP não encontrado.');
           document.getElementById('addressFields').style.display = 'none';
         } else {
-          // Preencher campos
           document.getElementById('clientRua').value = dados.logradouro;
           document.getElementById('clientBairro').value = dados.bairro;
           document.getElementById('clientCidade').value = dados.localidade;
           document.getElementById('clientUF').value = dados.uf;
           
-          // Mostrar campos e opções de frete
           document.getElementById('addressFields').style.display = 'block';
           document.getElementById('shippingSection').style.display = 'block';
           document.getElementById('clientNum').focus();
@@ -281,7 +348,6 @@ async function confirmOnlinePurchase() {
   if(cartShippingValue === 0) return showToast("Selecione uma opção de Frete.");
   if(cart.length === 0) return showToast("Carrinho vazio.");
 
-  // Montar o endereço completo para salvar no Firebase
   const rua = document.getElementById('clientRua').value;
   const comp = document.getElementById('clientComp').value;
   const bairro = document.getElementById('clientBairro').value;
@@ -315,10 +381,8 @@ async function confirmOnlinePurchase() {
   };
 
   try {
-    // 1. Enviar pedido pro Banco de Dados
     await db.collection("orders").add(orderData);
     
-    // 2. Dar baixa no estoque na nuvem de TODOS os itens do carrinho
     for(let item of cart) {
       const p = onlineProducts.find(x => x.id === item.id);
       if(p) {
@@ -328,7 +392,6 @@ async function confirmOnlinePurchase() {
       }
     }
 
-    // Limpar tudo
     document.getElementById('checkoutModal').style.display = 'none';
     document.getElementById('clientName').value = '';
     document.getElementById('clientPhone').value = '';
@@ -383,7 +446,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// MOBILE DRAWER
 function toggleDrawer() {
   const drawer = document.getElementById('navDrawer');
   const btn = document.getElementById('menuBtn');
