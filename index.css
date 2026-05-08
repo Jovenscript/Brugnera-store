@@ -30,6 +30,7 @@ nav {
 .nav-icon { font-size: 1.2rem; cursor: pointer; position: relative; }
 .cart-count { position: absolute; top: -6px; right: -8px; background: var(--rose); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; }
 .nav-wpp { display: flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 7px 14px; border-radius: 20px; text-decoration: none; font-size: 0.72rem; letter-spacing: 0.08em; font-weight: 500; transition: background 0.2s; }
+.nav-wpp svg { width: 15px; height: 15px; fill: white; }
 .nav-wpp:hover { background: #1ebe5d; }
 .nav-menu-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
 
@@ -105,7 +106,8 @@ nav {
 .insta-item:hover .insta-overlay { opacity: 1; }
 
 /* WHATSAPP FLOAT */
-.wpp-float { position: fixed; bottom: 28px; right: 28px; z-index: 200; background: #25D366; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; text-decoration: none; box-shadow: 0 4px 20px rgba(37,211,102,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+.wpp-float { position: fixed; bottom: 28px; right: 28px; z-index: 200; background: #25D366; color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 4px 20px rgba(37,211,102,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+.wpp-float svg { width: 30px; height: 30px; fill: white; }
 .wpp-float:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(37,211,102,0.55); }
 .wpp-float-tooltip { position: absolute; right: 64px; background: var(--black); color: white; padding: 6px 14px; border-radius: 6px; font-size: 0.75rem; letter-spacing: 0.05em; white-space: nowrap; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
 .wpp-float:hover .wpp-float-tooltip { opacity: 1; }
@@ -118,7 +120,8 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .footer-brand .footer-logo-text { font-family: 'Playfair Display', serif; font-size: 1.1rem; letter-spacing: 0.15em; color: white; }
 .footer-brand p { color: #777; font-size: 0.85rem; line-height: 1.8; font-weight: 300; max-width: 260px; }
 .footer-social { display: flex; gap: 12px; margin-top: 20px; }
-.social-btn { width: 36px; height: 36px; border: 1px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #888; font-size: 1rem; transition: all 0.2s; }
+.social-btn { width: 36px; height: 36px; border: 1px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #888; transition: all 0.2s; }
+.social-btn svg { width: 18px; height: 18px; fill: currentColor; }
 .social-btn:hover { border-color: var(--gold); color: var(--gold); }
 .footer-col h4 { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 20px; }
 .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
