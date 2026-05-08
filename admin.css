@@ -58,7 +58,6 @@ tbody tr:hover td { background:var(--surface2); }
 .status-badge.enviado { background:rgba(96,165,250,0.15); color:var(--blue); }
 .status-badge.entregue { background:rgba(201,169,110,0.15); color:var(--gold); }
 .status-badge.pendente { background:rgba(212,133,122,0.15); color:var(--rose); }
-.status-badge.rascunho { background:rgba(255,193,7,0.15); color:#ffc107; border:1px solid rgba(255,193,7,0.3); }
 
 /* BUTTONS & FORMS */
 .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap: wrap; gap: 12px; }
