@@ -8,15 +8,12 @@
 <title>BRUGNERA STORE — Moda Feminina</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-<!-- FIREBASE COMPAT SDK (Nuvem) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-<!-- ESTILOS -->
 <link rel="stylesheet" href="index.css">
 </head>
 <body>
 
-<!-- NAVEGAÇÃO PRINCIPAL -->
 <nav role="navigation" aria-label="Menu principal">
   <a href="#" class="nav-logo" aria-label="Brugnera Store - Início">
     <img src="brugnera-logo.jpg" alt="Logo Brugnera Store">
@@ -28,7 +25,7 @@
   </ul>
   <div class="nav-right">
     <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="nav-wpp" aria-label="Fale conosco no WhatsApp">
-      💬 WhatsApp
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg> WhatsApp
     </a>
     <div class="nav-icon" onclick="toggleCart()" aria-label="Carrinho de compras" role="button" tabindex="0">
       🛍️<span class="cart-count" id="cartCount">0</span>
@@ -37,7 +34,6 @@
   </div>
 </nav>
 
-<!-- MENU MOBILE DRAWER -->
 <nav class="nav-drawer" id="navDrawer" aria-label="Menu mobile">
   <a href="#colecao" onclick="closeDrawer()">Coleção</a>
   <a href="#sale" onclick="closeDrawer()">Sale</a>
@@ -45,7 +41,6 @@
   <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer">📸 Instagram</a>
 </nav>
 
-<!-- HERO -->
 <section class="hero" id="home" aria-label="Banner principal">
   <div class="hero-content">
     <p class="hero-tag">✦ Moda Feminina</p>
@@ -63,12 +58,10 @@
   </div>
 </section>
 
-<!-- FAIXA ANIMADA -->
 <div class="strip" role="marquee" aria-label="Informações da loja">
   <div class="strip-inner" id="stripInner"></div>
 </div>
 
-<!-- PRODUTOS -->
 <section class="products-section" id="colecao" aria-labelledby="produtos-titulo">
   <div class="section-title">
     <span class="tag">✦ Destaques</span>
@@ -87,7 +80,6 @@
   </div>
 </section>
 
-<!-- BANNER PROMOÇÃO -->
 <aside class="promo-banner" id="sale" aria-label="Promoção de temporada">
   <div class="promo-content">
     <span class="tag">✦ Oferta Especial</span>
@@ -102,7 +94,6 @@
   </div>
 </aside>
 
-<!-- INSTAGRAM -->
 <section class="insta-section" aria-labelledby="insta-titulo">
   <div class="section-title">
     <span class="tag">✦ @brugnera_store</span>
@@ -110,13 +101,12 @@
     <p>Inspire-se com looks do dia e bastidores da coleção</p>
     <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer"
       style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:10px 24px;background:linear-gradient(135deg,#405DE6,#5851DB,#833AB4,#C13584,#E1306C,#FD1D1D);color:white;border-radius:24px;text-decoration:none;font-size:0.8rem;letter-spacing:0.1em">
-      📸 Ver no Instagram
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg> Ver no Instagram
     </a>
   </div>
   <div class="insta-grid" id="instaGrid"></div>
 </section>
 
-<!-- FOOTER -->
 <footer>
   <div class="footer-top">
     <div class="footer-brand">
@@ -126,8 +116,12 @@
       </a>
       <p>Moda feminina com alma — peças que transformam o dia a dia em uma declaração de estilo.</p>
       <div class="footer-social">
-        <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer" class="social-btn" aria-label="Instagram">📸</a>
-        <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="social-btn" aria-label="WhatsApp">💬</a>
+        <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer" class="social-btn" aria-label="Instagram">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+        </a>
+        <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="social-btn" aria-label="WhatsApp">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        </a>
       </div>
     </div>
     <div class="footer-col">
@@ -164,13 +158,11 @@
   </div>
 </footer>
 
-<!-- WHATSAPP FLUTUANTE -->
 <a href="https://wa.me/5547966296688" target="_blank" rel="noopener noreferrer" class="wpp-float" aria-label="Fale conosco no WhatsApp">
   <span class="wpp-float-tooltip">Fale conosco!</span>
-  💬
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
 </a>
 
-<!-- CARRINHO LATERAL -->
 <div class="cart-overlay" id="cartOverlay" onclick="handleCartClick(event)" role="dialog" aria-modal="true" aria-label="Carrinho de compras">
   <div class="cart-panel">
     <div class="cart-header">
@@ -188,7 +180,6 @@
   </div>
 </div>
 
-<!-- MODAL PRODUTO -->
 <div class="prod-overlay" id="prodOverlay" onclick="handleProdClick(event)" role="dialog" aria-modal="true" aria-label="Detalhes do produto">
   <div class="prod-modal" style="position:relative">
     <button class="prod-modal-close" onclick="closeProdModal()" aria-label="Fechar">✕</button>
@@ -206,7 +197,6 @@
   </div>
 </div>
 
-<!-- MODAL CHECKOUT COM FRETE AUTOMÁTICO -->
 <div class="checkout-modal" id="checkoutModal">
   <div class="checkout-box">
     <h3 style="font-family:'Playfair Display',serif; font-size:1.6rem; margin-bottom:10px;">Finalizar Pedido</h3>
@@ -271,10 +261,8 @@
   </div>
 </div>
 
-<!-- TOAST NOTIFICAÇÃO -->
 <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
-<!-- SCRIPT -->
 <script src="index.js"></script>
 
 </body>
