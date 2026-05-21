@@ -44,6 +44,19 @@ const instaImgs = [
 ];
 
 // ==========================================
+// HELPERS DE PREÇO E CONVERSÃO
+// ==========================================
+function fmt(n) { return Number(n || 0).toFixed(2).replace('.', ','); }
+
+// Desconto honesto: só calcula se houver um preço "de" REAL maior que o preço atual.
+function calcDiscount(p) {
+  if (p && p.oldPrice && Number(p.oldPrice) > Number(p.price)) {
+    return Math.round((p.oldPrice - p.price) / p.oldPrice * 100);
+  }
+  return 0;
+}
+
+// ==========================================
 // ESCUTAR BANCO EM TEMPO REAL
 // ==========================================
 db.collection("products")
@@ -76,7 +89,7 @@ function renderFilters() {
 }
 
 // ==========================================
-// RENDERIZAÇÃO DA VITRINE
+// RENDERIZAÇÃO DA VITRINE (com conversão)
 // ==========================================
 function renderProducts(list) {
   const grid = document.getElementById('productsGrid');
@@ -95,16 +108,30 @@ function renderProducts(list) {
 
   grid.innerHTML = inStockList.map(p => {
     const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
+    const disc = calcDiscount(p);
+    const pix = fmt(p.price * 0.95);
+
+    // Badges baseados em dados REAIS (oferta, mais vendido, escassez real)
+    const badges = [];
+    if (disc > 0) badges.push(`<span class="badge badge-offer">−${disc}% OFF</span>`);
+    if (p.bestseller) badges.push(`<span class="badge badge-bestseller">★ Mais vendido</span>`);
+    if (p.stock <= 3) badges.push(`<span class="badge badge-last">🔥 Últimas ${p.stock}</span>`);
+
     return `
     <article class="product-card">
       <div class="product-img-wrap" onclick="openProductModal('${p.id}')">
+        ${badges.length ? `<div class="product-badges">${badges.join('')}</div>` : ''}
         <img src="${mainImg}" alt="${p.name}" loading="lazy">
-        <button class="product-quick-add">Adicionar ao Carrinho</button>
+        <button class="product-quick-add">Ver peça</button>
       </div>
       <div class="product-info">
         <h3>${p.name}</h3>
-        <div class="price">R$ ${p.price.toFixed(2).replace('.',',')}</div>
-        <div style="font-size:0.7rem; color:var(--gray); margin-top:4px;">💳 Em até 3x sem juros</div> ${p.stock <= 3 ? `<div class="stock-alert">⚠️ Últimas ${p.stock} unidades!</div>` : ``}
+        <div class="price-row">
+          ${disc > 0 ? `<span class="price-old">R$ ${fmt(p.oldPrice)}</span>` : ''}
+          <span class="price-now">R$ ${fmt(p.price)}</span>
+        </div>
+        <div class="price-pix">≈ R$ ${pix} à vista no Pix</div>
+        <div class="installments">💳 ou em até 3x sem juros</div>
       </div>
     </article>
   `}).join('');
@@ -132,18 +159,48 @@ function openProductModal(id) {
   renderCarousel();
 
   document.getElementById('modalName').textContent = p.name;
-  document.getElementById('modalPrice').textContent = `R$ ${p.price.toFixed(2).replace('.',',')}`;
-  
-  const pixPrice = (p.price * 0.95).toFixed(2).replace('.', ',');
+
+  // Preço (com promoção honesta, se houver)
+  const disc = calcDiscount(p);
+  const priceEl = document.getElementById('modalPrice');
+  if (disc > 0) {
+    priceEl.innerHTML = `<span class="modal-old-price">De R$ ${fmt(p.oldPrice)}</span>R$ ${fmt(p.price)}<span class="modal-off-pill">−${disc}% OFF</span>`;
+  } else {
+    priceEl.innerHTML = `R$ ${fmt(p.price)}`;
+  }
+
+  const pixPrice = fmt(p.price * 0.95);
   document.getElementById('modalPix').textContent = `R$ ${pixPrice} no Pix (5% off)`;
   document.getElementById('modalDesc').textContent = p.desc || "Peça exclusiva Brugnera Store.";
   document.getElementById('modalStock').textContent = p.stock <= 3 ? `⚠️ Últimas ${p.stock} unidades em estoque!` : `✓ ${p.stock} unidades disponíveis`;
   
   const sizes = p.sizes || ['U'];
   document.getElementById('modalSizes').innerHTML = sizes.map(s => `<button class="size-btn" onclick="selectSize('${s}', this)">${s}</button>`).join('');
+
+  // Sinais de confiança (criados via JS — não precisa mexer no HTML)
+  renderModalTrust();
   
   document.getElementById('prodOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+function renderModalTrust() {
+  let trustEl = document.getElementById('modalTrust');
+  if (!trustEl) {
+    trustEl = document.createElement('div');
+    trustEl.id = 'modalTrust';
+    trustEl.className = 'prod-trust';
+    const stockEl = document.getElementById('modalStock');
+    if (stockEl && stockEl.parentNode) {
+      stockEl.parentNode.insertBefore(trustEl, stockEl.nextSibling);
+    }
+  }
+  trustEl.innerHTML = `
+    <span>🔒 <b>Compra segura</b></span>
+    <span>💚 <b>5% OFF</b> no Pix</span>
+    <span>📦 Enviamos p/ todo o Brasil</span>
+    <span>🔁 Troca facilitada</span>
+  `;
 }
 
 function renderCarousel() {
@@ -384,12 +441,10 @@ async function confirmOnlinePurchase() {
     await db.collection("orders").add(orderData);
     
     for(let item of cart) {
-      const p = onlineProducts.find(x => x.id === item.id);
-      if(p) {
-        await db.collection("products").doc(item.id).update({
-          stock: Math.max(0, p.stock - item.qty)
-        });
-      }
+      // Operação atômica: evita venda dupla quando 2 clientes compram ao mesmo tempo
+      await db.collection("products").doc(item.id).update({
+        stock: firebase.firestore.FieldValue.increment(-item.qty)
+      });
     }
 
     document.getElementById('checkoutModal').style.display = 'none';
@@ -423,7 +478,7 @@ function renderInsta() {
 }
 
 function renderStrip() {
-  const msgs = ['Frete Grátis acima de R$299','Pix com 5% de desconto','12x sem juros no cartão','Envio em até 24h','Nova Coleção Disponível'];
+  const msgs = ['Frete para todo o Brasil','Pix com 5% de desconto','12x sem juros no cartão','Envio em até 24h','Nova Coleção Disponível'];
   const full = [...msgs,...msgs].map(m => `<span>${m}</span><span class="dot">✦</span>`).join('');
   document.getElementById('stripInner').innerHTML = full + full;
 }
