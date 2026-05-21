@@ -23,6 +23,10 @@ const ADMIN_EMAILS = [
   'admin@brugnerastore.com.br'
 ];
 
+// CONFIGURAÇÕES DO GERENCIADOR DE FOTOS
+const MAX_PRODUCT_IMAGES = 8;   // limite de fotos por produto
+const MAX_IMAGE_MB = 8;         // tamanho máximo aceito por arquivo (antes de comprimir)
+
 // ESTADOS GLOBAIS
 let products = [];
 let draftProducts = []; 
@@ -33,7 +37,8 @@ let currentAiType = 'legenda';
 let stockLog = JSON.parse(localStorage.getItem('brugnera_stocklog') || '[]');
 let igExtractedData = null;
 let igImageBase64 = null;
-let uploadedImages = []; // Array das múltiplas fotos (Etapa 2)
+let uploadedImages = []; // Array ORDENADO das fotos do produto. A posição [0] é sempre a CAPA.
+let dragImgIndex = null; // índice da foto sendo arrastada (drag & drop)
 
 // ==========================================
 // AUTENTICAÇÃO — GUARD DO ADMIN
@@ -116,53 +121,156 @@ function initApp() {
     calculateDashboard();
   });
 
-  // UPLOAD DE MÚLTIPLAS IMAGENS (Etapa 2)
+  // UPLOAD DE MÚLTIPLAS IMAGENS  (agora ACUMULA em vez de zerar a cada seleção)
   const fileInput = document.getElementById('fImgFile');
   if(fileInput) {
     fileInput.addEventListener('change', function(e) {
-      const files = e.target.files;
+      const files = Array.from(e.target.files || []);
       if(!files.length) return;
-      
-      uploadedImages = []; 
-      const previewContainer = document.getElementById('imgPreviewContainer');
-      if(previewContainer) previewContainer.innerHTML = ''; 
-      
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const img = new Image();
-          img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let scaleSize = 800 / img.width; 
-            if (scaleSize > 1) scaleSize = 1;
-            canvas.width = img.width * scaleSize;
-            canvas.height = img.height * scaleSize;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
-            
-            uploadedImages.push(dataUrl); 
-            
-            if(previewContainer) {
-                const imgEl = document.createElement('img');
-                imgEl.src = dataUrl;
-                imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
-                previewContainer.appendChild(imgEl);
-            }
-            // Manter compatibilidade com rotinas que pedem uma única imagem de base
-            if(document.getElementById('fImgBase64')) {
-                document.getElementById('fImgBase64').value = dataUrl;
-            }
-          }
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
+      addImageFiles(files);
+      // Limpa o input para permitir re-selecionar os mesmos arquivos / adicionar em novos lotes
+      e.target.value = '';
     });
   }
 
   const dateBadge = document.getElementById('dateBadge');
   if(dateBadge) dateBadge.textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'2-digit', month:'long'});
+}
+
+// ==========================================
+// GERENCIADOR DE FOTOS DO PRODUTO
+//  - Adiciona (comprime via Canvas e acumula no array)
+//  - Define capa (move a foto para a posição [0])
+//  - Exclui foto
+//  - Reordena (arrastar no desktop / botões ◀ ▶ no celular)
+// ==========================================
+function addImageFiles(files) {
+  const remaining = MAX_PRODUCT_IMAGES - uploadedImages.length;
+  if (remaining <= 0) {
+    alert(`Você atingiu o limite de ${MAX_PRODUCT_IMAGES} fotos por produto. Exclua alguma para adicionar outra.`);
+    return;
+  }
+
+  // Validação: só imagens e dentro do tamanho máximo
+  const onlyImages = files.filter(f => f.type && f.type.startsWith('image/'));
+  if (onlyImages.length !== files.length) {
+    alert('Alguns arquivos foram ignorados por não serem imagens.');
+  }
+  const validSize = onlyImages.filter(f => f.size <= MAX_IMAGE_MB * 1024 * 1024);
+  if (validSize.length !== onlyImages.length) {
+    alert(`Algumas fotos foram ignoradas por passarem de ${MAX_IMAGE_MB}MB.`);
+  }
+
+  const toProcess = validSize.slice(0, remaining);
+  if (validSize.length > remaining) {
+    alert(`Só cabem mais ${remaining} foto(s). As demais foram ignoradas.`);
+  }
+
+  toProcess.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let scaleSize = 800 / img.width; 
+        if (scaleSize > 1) scaleSize = 1;
+        canvas.width = img.width * scaleSize;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+
+        uploadedImages.push(dataUrl); 
+        renderImageManager();
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderImageManager() {
+  const container = document.getElementById('imgPreviewContainer');
+  if (!container) return;
+
+  // Compatibilidade com o restante do sistema: a capa é sempre uploadedImages[0]
+  const cover = uploadedImages[0] || '';
+  const hiddenEl = document.getElementById('fImgBase64');
+  if (hiddenEl) hiddenEl.value = cover;
+  const legacyPreview = document.getElementById('imgPreview');
+  if (legacyPreview) legacyPreview.style.display = 'none'; // o manager já mostra as fotos
+
+  if (uploadedImages.length === 0) {
+    container.className = 'img-manager';
+    container.innerHTML = `<div class="img-manager-empty">Nenhuma foto ainda. A 1ª foto adicionada vira a <b>capa</b> do produto.</div>`;
+    return;
+  }
+
+  container.className = 'img-manager';
+  const last = uploadedImages.length - 1;
+  container.innerHTML = `
+    <div class="img-manager-counter">${uploadedImages.length}/${MAX_PRODUCT_IMAGES} fotos &bull; a 1ª é a capa &bull; arraste para reordenar</div>
+    <div class="img-thumb-grid">
+      ${uploadedImages.map((src, i) => `
+        <div class="img-thumb ${i === 0 ? 'cover' : ''}"
+             draggable="true"
+             ondragstart="dragImgStart(event, ${i})"
+             ondragover="dragImgOver(event)"
+             ondrop="dragImgDrop(event, ${i})"
+             ondragend="dragImgEnd(event)">
+          ${i === 0 ? '<span class="img-thumb-badge">★ Capa</span>' : ''}
+          <img src="${src}" alt="Foto ${i + 1}">
+          <div class="img-thumb-actions">
+            <button type="button" title="Mover para a esquerda" onclick="moveImage(${i}, ${i - 1})" ${i === 0 ? 'disabled' : ''}>◀</button>
+            ${i !== 0 ? `<button type="button" class="set-cover" title="Definir como capa" onclick="setCoverImage(${i})">★</button>` : ''}
+            <button type="button" class="remove" title="Excluir foto" onclick="removeImage(${i})">✕</button>
+            <button type="button" title="Mover para a direita" onclick="moveImage(${i}, ${i + 1})" ${i === last ? 'disabled' : ''}>▶</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function removeImage(index) {
+  if (index < 0 || index >= uploadedImages.length) return;
+  uploadedImages.splice(index, 1);
+  renderImageManager();
+}
+
+function setCoverImage(index) {
+  if (index <= 0 || index >= uploadedImages.length) return;
+  const [img] = uploadedImages.splice(index, 1);
+  uploadedImages.unshift(img);
+  renderImageManager();
+}
+
+function moveImage(from, to) {
+  if (to < 0 || to >= uploadedImages.length || from === to) return;
+  const [img] = uploadedImages.splice(from, 1);
+  uploadedImages.splice(to, 0, img);
+  renderImageManager();
+}
+
+// Drag & Drop (desktop)
+function dragImgStart(e, i) {
+  dragImgIndex = i;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+function dragImgOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+function dragImgDrop(e, i) {
+  e.preventDefault();
+  if (dragImgIndex === null || dragImgIndex === i) return;
+  moveImage(dragImgIndex, i);
+  dragImgIndex = null;
+}
+function dragImgEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  dragImgIndex = null;
 }
 
 // ==========================================
@@ -318,25 +426,10 @@ function openProductForm(id = null, isDraft = false) {
   
   if(document.getElementById('fImgFile')) document.getElementById('fImgFile').value = '';
   if(document.getElementById('fImgBase64')) document.getElementById('fImgBase64').value = p?.img || '';
-  
-  const previewContainer = document.getElementById('imgPreviewContainer');
-  if(previewContainer) previewContainer.innerHTML = '';
-  
-  uploadedImages = p?.images || (p?.img ? [p.img] : []);
-  uploadedImages.forEach(imgData => {
-    if(previewContainer) {
-        const imgEl = document.createElement('img');
-        imgEl.src = imgData;
-        imgEl.style = "width:60px; height:80px; object-fit:cover; border-radius:4px; border:1px solid var(--border);";
-        previewContainer.appendChild(imgEl);
-    }
-  });
 
-  const mainPreview = document.getElementById('imgPreview');
-  if(mainPreview) {
-      mainPreview.src = p?.img || '';
-      mainPreview.style.display = p?.img ? 'block' : 'none';
-  }
+  // Carrega as fotos existentes no Gerenciador de Fotos (mantendo a ordem salva)
+  uploadedImages = (p?.images && p.images.length) ? [...p.images] : (p?.img ? [p.img] : []);
+  renderImageManager();
 
   document.getElementById('prodModal').classList.add('show');
 }
@@ -349,20 +442,32 @@ async function saveProduct() {
   const name = document.getElementById('fNome').value.trim();
   const stock = parseInt(document.getElementById('fEstoque').value) || 0;
   const cat = document.getElementById('fCat').value.trim();
+  const cost = parseFloat(document.getElementById('fCusto').value) || 0;
+  const price = parseFloat(document.getElementById('fPreco').value) || 0;
+
+  // ---- Validações (prevenção de erros) ----
   if (!name) return alert("Nome é obrigatório.");
   if (!cat) return alert("Categoria é obrigatória.");
-  
-  // Garantir que a primeira imagem (ou única) não se perca se não for feito novo upload
+  if (uploadedImages.length === 0 &&
+      !confirm("Este produto está sem fotos. Sem capa ele fica feio na vitrine. Salvar mesmo assim?")) {
+    return;
+  }
+  if (price > 0 && cost > 0 && price < cost &&
+      !confirm("⚠️ O preço de VENDA está menor que o CUSTO — isso dá prejuízo. Deseja continuar mesmo assim?")) {
+    return;
+  }
+
+  // A ordem do array já reflete a escolha da lojista. A capa é a posição [0].
   const imgBase64 = document.getElementById('fImgBase64') ? document.getElementById('fImgBase64').value : '';
   const finalImages = uploadedImages.length > 0 ? uploadedImages : (imgBase64 ? [imgBase64] : []);
   
   const data = {
     name,
     category: cat,
-    cost: parseFloat(document.getElementById('fCusto').value) || 0,
-    price: parseFloat(document.getElementById('fPreco').value) || 0,
+    cost: cost,
+    price: price,
     stock: stock,
-    sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()),
+    sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()).filter(Boolean),
     desc: document.getElementById('fDesc').value,
     images: finalImages,
     img: finalImages.length > 0 ? finalImages[0] : "",
@@ -490,8 +595,10 @@ async function finishPDV() {
   try {
     await db.collection("orders").add(orderData);
     for (let item of pdvCart) {
-      const p = products.find(x => x.id === item.id);
-      await db.collection("products").doc(item.id).update({ stock: p.stock - item.qty });
+      // Operação atômica: evita venda dupla em concorrência
+      await db.collection("products").doc(item.id).update({
+        stock: firebase.firestore.FieldValue.increment(-item.qty)
+      });
     }
     alert("✅ Venda registrada! Estoque atualizado.");
     pdvCart = [];
@@ -599,9 +706,16 @@ async function saveStockEntry() {
   if (!qty) return;
   const p = products.find(x => x.id === id);
   const delta = type === 'saida' ? -qty : qty;
-  const newStock = Math.max(0, p.stock + delta);
-  
-  await db.collection("products").doc(id).update({ stock: newStock });
+
+  // Atomicidade no estoque (entrada/saída/ajuste)
+  if (type === 'ajuste') {
+    await db.collection("products").doc(id).update({ stock: Math.max(0, qty) });
+  } else {
+    await db.collection("products").doc(id).update({
+      stock: firebase.firestore.FieldValue.increment(delta)
+    });
+  }
+
   stockLog.unshift({date: new Date().toLocaleDateString('pt-BR'), product: p.name, type, qty: delta, user: 'Admin'});
   localStorage.setItem('brugnera_stocklog', JSON.stringify(stockLog));
   document.getElementById('stockModal').classList.remove('show');
