@@ -35,7 +35,7 @@ let cartTotalValue = 0;
 let selectedShippingName = "";
 
 const instaImgs = [
-  "https://images.unsplash.com/photo-1536766768598-e09213fdcf22?w=400&q=80",
+  "https://www.instagram.com/reel/DYZzqYhR-nM/?igsh=MXZ5d2t2MzlsdDBieA==",
   "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80",
   "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80",
   "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80",
