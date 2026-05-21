@@ -35,11 +35,11 @@ let cartTotalValue = 0;
 let selectedShippingName = "";
 
 const instaImgs = [
-  "https://www.google.com/imgres?q=roupas%20de%20inverno%20femininas&imgurl=https%3A%2F%2Fblog.enluaze.com.br%2Fwp-content%2Fuploads%2F2025%2F06%2Fimage-4-683x1024.png&imgrefurl=https%3A%2F%2Fblog.enluaze.com.br%2Flooks-de-inverno-feminino%2F&docid=cSCZ3GqMfL__zM&tbnid=Uv34AVAXPRTG_M&vet=12ahUKEwjQl-y1w8uUAxXxF7kGHZ7WKksQnPAOegUIiwEQAQ..i&w=683&h=1024&hcb=2&ved=2ahUKEwjQl-y1w8uUAxXxF7kGHZ7WKksQnPAOegUIiwEQAQ",
+   "https://images.unsplash.com/photo-1536766768598-e09213fdcf22?w=400&q=80",
   "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80",
   "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80",
   "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80",
-  "https://www.google.com/imgres?q=roupas%20de%20inverno%20femininas&imgurl=https%3A%2F%2Fhttp2.mlstatic.com%2FD_NQ_NP_2X_763069-MLB86139829659_062025-T-conjunto-de-inverno-casual-boutelle-roupa-feminina-blogueira.webp&imgrefurl=https%3A%2F%2Flista.mercadolivre.com.br%2Froupas-de-inverno-femininas&docid=qm7t6rhoo4ddaM&tbnid=M7P7sEflBoKIZM&vet=12ahUKEwjqmJm9w8uUAxWzH7kGHfqLBQM4ChCc8A56BAhnEAE..i&w=164&h=320&hcb=2&ved=2ahUKEwjqmJm9w8uUAxWzH7kGHfqLBQM4ChCc8A56BAhnEAE",
+  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
   "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=400&q=80",
 ];
 
