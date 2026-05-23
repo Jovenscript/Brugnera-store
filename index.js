@@ -14,6 +14,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Endpoint da função de frete (Cloud Function -> Melhor Envio)
+const FRETE_API = "https://us-central1-brugnerastore.cloudfunctions.net/calcularFrete";
+
 // ==========================================
 // ESTADOS GLOBAIS
 // ==========================================
@@ -35,7 +38,7 @@ let cartTotalValue = 0;
 let selectedShippingName = "";
 
 const instaImgs = [
-   "https://images.unsplash.com/photo-1536766768598-e09213fdcf22?w=400&q=80",
+  "https://images.unsplash.com/photo-1536766768598-e09213fdcf22?w=400&q=80",
   "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80",
   "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80",
   "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80",
@@ -377,6 +380,9 @@ function buscarCEP(cep) {
           document.getElementById('addressFields').style.display = 'block';
           document.getElementById('shippingSection').style.display = 'block';
           document.getElementById('clientNum').focus();
+
+          // Busca o frete REAL no Melhor Envio para este CEP
+          calcularFreteReal(cepLimpo);
         }
       })
       .catch(err => {
@@ -390,6 +396,46 @@ function selecionarFrete(valor, nome) {
   cartShippingValue = valor;
   selectedShippingName = nome;
   atualizarTotalCheckout();
+}
+
+// Consulta o frete REAL (Cloud Function -> Melhor Envio) e renderiza as opções
+async function calcularFreteReal(cep) {
+  const container = document.getElementById('shippingOptions');
+  if (!container) return;
+
+  // Zera frete anterior e mostra carregamento
+  cartShippingValue = 0;
+  selectedShippingName = "";
+  atualizarTotalCheckout();
+  container.innerHTML = '<p style="font-size:0.85rem;color:var(--gray);">📦 Calculando frete...</p>';
+
+  try {
+    const resp = await fetch(`${FRETE_API}?cep=${cep}`);
+    const data = await resp.json();
+
+    if (!data.ok || !Array.isArray(data.opcoes) || data.opcoes.length === 0) {
+      container.innerHTML = '<p style="font-size:0.85rem;color:var(--rose);">Não conseguimos calcular o frete para este CEP agora. Confira o CEP e tente novamente.</p>';
+      return;
+    }
+
+    // Mais barato primeiro
+    const opcoes = data.opcoes.slice().sort((a, b) => a.preco - b.preco);
+
+    container.innerHTML = opcoes.map((o) => {
+      const label = `${o.transportadora} ${o.nome}`.trim();
+      const precoFmt = Number(o.preco).toFixed(2).replace('.', ',');
+      const labelSafe = label.replace(/'/g, "");
+      return `
+        <label class="ship-opt">
+          <input type="radio" name="shippingOpt" value="${label}"
+                 onchange="selecionarFrete(${Number(o.preco)}, '${labelSafe}')">
+          <span><b>${label}</b> (${o.prazoDias} dias úteis) — R$ ${precoFmt}</span>
+        </label>
+      `;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<p style="font-size:0.85rem;color:var(--rose);">Erro ao calcular o frete. Verifique sua conexão e tente de novo.</p>';
+  }
 }
 
 async function confirmOnlinePurchase() {
