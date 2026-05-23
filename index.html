@@ -235,15 +235,8 @@
 
     <div class="checkout-form-section" id="shippingSection" style="display:none;">
       <h4>Escolha o Frete</h4>
-      <div class="shipping-options">
-        <label class="ship-opt">
-          <input type="radio" name="shippingOpt" value="PAC" onchange="selecionarFrete(25.90, 'PAC')">
-          <span><b>Correios PAC</b> (7 a 10 dias úteis) - R$ 25,90</span>
-        </label>
-        <label class="ship-opt">
-          <input type="radio" name="shippingOpt" value="SEDEX" onchange="selecionarFrete(45.50, 'SEDEX')">
-          <span><b>Correios SEDEX</b> (2 a 4 dias úteis) - R$ 45,50</span>
-        </label>
+      <div class="shipping-options" id="shippingOptions">
+        <!-- Opções de frete reais (Melhor Envio) inseridas via JS -->
       </div>
     </div>
 
