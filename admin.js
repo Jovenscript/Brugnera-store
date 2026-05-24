@@ -37,8 +37,9 @@ let currentAiType = 'legenda';
 let stockLog = JSON.parse(localStorage.getItem('brugnera_stocklog') || '[]');
 let igExtractedData = null;
 let igImageBase64 = null;
-let uploadedImages = []; // Array ORDENADO das fotos do produto. A posição [0] é sempre a CAPA.
-let dragImgIndex = null; // índice da foto sendo arrastada (drag & drop)
+let productColors = [];   // [{ nome, hex, imagens: [base64...] }] — cada COR tem suas próprias fotos. A foto [0] de cada cor é a capa daquela cor.
+let activeColorIndex = 0; // qual cor está sendo editada agora no formulário
+let dragImgIndex = null;  // índice da foto sendo arrastada (drag & drop)
 
 // ==========================================
 // AUTENTICAÇÃO — GUARD DO ADMIN
@@ -144,10 +145,17 @@ function initApp() {
 //  - Exclui foto
 //  - Reordena (arrastar no desktop / botões ◀ ▶ no celular)
 // ==========================================
+// Cria uma nova cor vazia
+function novaCor(nome = '', hex = '#888888') { return { nome, hex, imagens: [] }; }
+// Retorna o array de fotos da COR que está sendo editada agora
+function fotosAtivas() { return productColors[activeColorIndex] ? productColors[activeColorIndex].imagens : []; }
+
 function addImageFiles(files) {
-  const remaining = MAX_PRODUCT_IMAGES - uploadedImages.length;
+  if (!productColors[activeColorIndex]) { productColors.push(novaCor()); activeColorIndex = 0; }
+  const alvo = productColors[activeColorIndex].imagens;
+  const remaining = MAX_PRODUCT_IMAGES - alvo.length;
   if (remaining <= 0) {
-    alert(`Você atingiu o limite de ${MAX_PRODUCT_IMAGES} fotos por produto. Exclua alguma para adicionar outra.`);
+    alert(`Limite de ${MAX_PRODUCT_IMAGES} fotos por cor. Exclua alguma para adicionar outra.`);
     return;
   }
 
@@ -180,8 +188,8 @@ function addImageFiles(files) {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
 
-        uploadedImages.push(dataUrl); 
-        renderImageManager();
+        productColors[activeColorIndex].imagens.push(dataUrl);
+        renderColorManager();
       };
       img.src = event.target.result;
     };
@@ -189,67 +197,133 @@ function addImageFiles(files) {
   });
 }
 
-function renderImageManager() {
+// ---- Gerenciamento das CORES (abas) ----
+function addColor() {
+  if (productColors.length >= 12) { alert('Limite de 12 cores por produto.'); return; }
+  productColors.push(novaCor('', '#888888'));
+  activeColorIndex = productColors.length - 1;
+  renderColorManager();
+}
+function removeColor(i) {
+  if (i < 0 || i >= productColors.length) return;
+  if (productColors.length === 1) { alert('O produto precisa de pelo menos 1 cor. Você pode renomeá-la.'); return; }
+  if (!confirm(`Excluir a cor "${productColors[i].nome || 'sem nome'}" e todas as fotos dela?`)) return;
+  productColors.splice(i, 1);
+  if (activeColorIndex >= productColors.length) activeColorIndex = productColors.length - 1;
+  renderColorManager();
+}
+function setActiveColor(i) {
+  if (i < 0 || i >= productColors.length) return;
+  activeColorIndex = i;
+  renderColorManager();
+}
+// Atualiza nome/cor SEM re-render completo (pra não perder o foco do campo enquanto digita)
+function updateColorName(i, value) {
+  if (!productColors[i]) return;
+  productColors[i].nome = value;
+  const tab = document.querySelector(`.color-tab[data-idx="${i}"] .color-tab-name`);
+  if (tab) tab.textContent = value || 'Sem nome';
+}
+function updateColorHex(i, value) {
+  if (!productColors[i]) return;
+  productColors[i].hex = value;
+  const dot = document.querySelector(`.color-tab[data-idx="${i}"] .color-dot`);
+  if (dot) dot.style.background = value;
+}
+
+function renderColorManager() {
   const container = document.getElementById('imgPreviewContainer');
   if (!container) return;
 
-  // Compatibilidade com o restante do sistema: a capa é sempre uploadedImages[0]
-  const cover = uploadedImages[0] || '';
+  // Garante pelo menos uma cor sempre
+  if (productColors.length === 0) { productColors.push(novaCor('Padrão', '#888888')); activeColorIndex = 0; }
+  if (activeColorIndex >= productColors.length) activeColorIndex = productColors.length - 1;
+
+  // Compatibilidade com o restante do sistema: capa do produto = 1ª foto da 1ª cor
+  const cover = (productColors[0] && productColors[0].imagens[0]) || '';
   const hiddenEl = document.getElementById('fImgBase64');
   if (hiddenEl) hiddenEl.value = cover;
   const legacyPreview = document.getElementById('imgPreview');
-  if (legacyPreview) legacyPreview.style.display = 'none'; // o manager já mostra as fotos
+  if (legacyPreview) legacyPreview.style.display = 'none';
 
-  if (uploadedImages.length === 0) {
-    container.className = 'img-manager';
-    container.innerHTML = `<div class="img-manager-empty">Nenhuma foto ainda. A 1ª foto adicionada vira a <b>capa</b> do produto.</div>`;
-    return;
-  }
+  const ativa = productColors[activeColorIndex];
+  const fotos = ativa.imagens;
+  const last = fotos.length - 1;
 
-  container.className = 'img-manager';
-  const last = uploadedImages.length - 1;
+  // Abas de cor (bolinha + nome + contador de fotos)
+  const tabs = productColors.map((c, i) => `
+    <button type="button" class="color-tab ${i === activeColorIndex ? 'active' : ''}" data-idx="${i}" onclick="setActiveColor(${i})">
+      <span class="color-dot" style="background:${c.hex || '#888'}"></span>
+      <span class="color-tab-name">${c.nome ? c.nome.replace(/</g,'&lt;') : 'Sem nome'}</span>
+      <span class="color-tab-count">${c.imagens.length}</span>
+    </button>`).join('');
+
+  // Grade de fotos da cor ativa
+  const grid = fotos.length === 0
+    ? `<div class="img-manager-empty">Nenhuma foto nesta cor ainda. A 1ª foto vira a <b>capa</b> desta cor.</div>`
+    : `<div class="img-thumb-grid">
+        ${fotos.map((src, i) => `
+          <div class="img-thumb ${i === 0 ? 'cover' : ''}"
+               draggable="true"
+               ondragstart="dragImgStart(event, ${i})"
+               ondragover="dragImgOver(event)"
+               ondrop="dragImgDrop(event, ${i})"
+               ondragend="dragImgEnd(event)">
+            ${i === 0 ? '<span class="img-thumb-badge">★ Capa</span>' : ''}
+            <img src="${src}" alt="Foto ${i + 1}">
+            <div class="img-thumb-actions">
+              <button type="button" title="Mover para a esquerda" onclick="moveImage(${i}, ${i - 1})" ${i === 0 ? 'disabled' : ''}>◀</button>
+              ${i !== 0 ? `<button type="button" class="set-cover" title="Definir como capa" onclick="setCoverImage(${i})">★</button>` : ''}
+              <button type="button" class="remove" title="Excluir foto" onclick="removeImage(${i})">✕</button>
+              <button type="button" title="Mover para a direita" onclick="moveImage(${i}, ${i + 1})" ${i === last ? 'disabled' : ''}>▶</button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+
+  container.className = 'color-manager';
   container.innerHTML = `
-    <div class="img-manager-counter">${uploadedImages.length}/${MAX_PRODUCT_IMAGES} fotos &bull; a 1ª é a capa &bull; arraste para reordenar</div>
-    <div class="img-thumb-grid">
-      ${uploadedImages.map((src, i) => `
-        <div class="img-thumb ${i === 0 ? 'cover' : ''}"
-             draggable="true"
-             ondragstart="dragImgStart(event, ${i})"
-             ondragover="dragImgOver(event)"
-             ondrop="dragImgDrop(event, ${i})"
-             ondragend="dragImgEnd(event)">
-          ${i === 0 ? '<span class="img-thumb-badge">★ Capa</span>' : ''}
-          <img src="${src}" alt="Foto ${i + 1}">
-          <div class="img-thumb-actions">
-            <button type="button" title="Mover para a esquerda" onclick="moveImage(${i}, ${i - 1})" ${i === 0 ? 'disabled' : ''}>◀</button>
-            ${i !== 0 ? `<button type="button" class="set-cover" title="Definir como capa" onclick="setCoverImage(${i})">★</button>` : ''}
-            <button type="button" class="remove" title="Excluir foto" onclick="removeImage(${i})">✕</button>
-            <button type="button" title="Mover para a direita" onclick="moveImage(${i}, ${i + 1})" ${i === last ? 'disabled' : ''}>▶</button>
-          </div>
-        </div>
-      `).join('')}
+    <div class="color-tabs">
+      ${tabs}
+      <button type="button" class="color-tab-add" onclick="addColor()" title="Adicionar nova cor">+ Cor</button>
     </div>
-  `;
+    <div class="color-editor">
+      <div class="color-editor-head">
+        <label class="color-field">
+          <span>Nome da cor</span>
+          <input type="text" value="${(ativa.nome || '').replace(/"/g,'&quot;')}" placeholder="Ex: Preto, Branco, Vinho..." oninput="updateColorName(${activeColorIndex}, this.value)">
+        </label>
+        <label class="color-field color-field-hex">
+          <span>Bolinha</span>
+          <input type="color" value="${ativa.hex || '#888888'}" oninput="updateColorHex(${activeColorIndex}, this.value)">
+        </label>
+        ${productColors.length > 1 ? `<button type="button" class="color-remove-btn" onclick="removeColor(${activeColorIndex})">✕ Excluir cor</button>` : ''}
+      </div>
+      <div class="img-manager-counter">${fotos.length}/${MAX_PRODUCT_IMAGES} fotos desta cor &bull; a 1ª é a capa &bull; arraste para reordenar</div>
+      ${grid}
+    </div>`;
 }
 
 function removeImage(index) {
-  if (index < 0 || index >= uploadedImages.length) return;
-  uploadedImages.splice(index, 1);
-  renderImageManager();
+  const alvo = fotosAtivas();
+  if (index < 0 || index >= alvo.length) return;
+  alvo.splice(index, 1);
+  renderColorManager();
 }
 
 function setCoverImage(index) {
-  if (index <= 0 || index >= uploadedImages.length) return;
-  const [img] = uploadedImages.splice(index, 1);
-  uploadedImages.unshift(img);
-  renderImageManager();
+  const alvo = fotosAtivas();
+  if (index <= 0 || index >= alvo.length) return;
+  const [img] = alvo.splice(index, 1);
+  alvo.unshift(img);
+  renderColorManager();
 }
 
 function moveImage(from, to) {
-  if (to < 0 || to >= uploadedImages.length || from === to) return;
-  const [img] = uploadedImages.splice(from, 1);
-  uploadedImages.splice(to, 0, img);
-  renderImageManager();
+  const alvo = fotosAtivas();
+  if (to < 0 || to >= alvo.length || from === to) return;
+  const [img] = alvo.splice(from, 1);
+  alvo.splice(to, 0, img);
+  renderColorManager();
 }
 
 // Drag & Drop (desktop)
@@ -427,9 +501,19 @@ function openProductForm(id = null, isDraft = false) {
   if(document.getElementById('fImgFile')) document.getElementById('fImgFile').value = '';
   if(document.getElementById('fImgBase64')) document.getElementById('fImgBase64').value = p?.img || '';
 
-  // Carrega as fotos existentes no Gerenciador de Fotos (mantendo a ordem salva)
-  uploadedImages = (p?.images && p.images.length) ? [...p.images] : (p?.img ? [p.img] : []);
-  renderImageManager();
+  // Carrega as CORES existentes. Produtos antigos (sem 'cores') viram uma única cor "Padrão" com as fotos atuais.
+  if (p?.cores && Array.isArray(p.cores) && p.cores.length) {
+    productColors = p.cores.map(c => ({
+      nome: c.nome || '',
+      hex: c.hex || '#888888',
+      imagens: Array.isArray(c.imagens) ? [...c.imagens] : []
+    }));
+  } else {
+    const legacy = (p?.images && p.images.length) ? [...p.images] : (p?.img ? [p.img] : []);
+    productColors = [ { nome: 'Padrão', hex: '#888888', imagens: legacy } ];
+  }
+  activeColorIndex = 0;
+  renderColorManager();
 
   document.getElementById('prodModal').classList.add('show');
 }
@@ -445,10 +529,17 @@ async function saveProduct() {
   const cost = parseFloat(document.getElementById('fCusto').value) || 0;
   const price = parseFloat(document.getElementById('fPreco').value) || 0;
 
+  // Monta as cores válidas (precisa ter pelo menos 1 foto). Nomeia automaticamente as sem nome.
+  const cores = productColors
+    .map(c => ({ nome: (c.nome || '').trim(), hex: c.hex || '#888888', imagens: c.imagens || [] }))
+    .filter(c => c.imagens.length > 0);
+  cores.forEach((c, i) => { if (!c.nome) c.nome = `Cor ${i + 1}`; });
+  const totalFotos = cores.reduce((n, c) => n + c.imagens.length, 0);
+
   // ---- Validações (prevenção de erros) ----
   if (!name) return alert("Nome é obrigatório.");
   if (!cat) return alert("Categoria é obrigatória.");
-  if (uploadedImages.length === 0 &&
+  if (totalFotos === 0 &&
       !confirm("Este produto está sem fotos. Sem capa ele fica feio na vitrine. Salvar mesmo assim?")) {
     return;
   }
@@ -457,9 +548,9 @@ async function saveProduct() {
     return;
   }
 
-  // A ordem do array já reflete a escolha da lojista. A capa é a posição [0].
+  // A capa do produto na vitrine/PDV é a 1ª foto da 1ª cor (mantém compatibilidade com images/img).
   const imgBase64 = document.getElementById('fImgBase64') ? document.getElementById('fImgBase64').value : '';
-  const finalImages = uploadedImages.length > 0 ? uploadedImages : (imgBase64 ? [imgBase64] : []);
+  const finalImages = cores.length > 0 ? cores[0].imagens : (imgBase64 ? [imgBase64] : []);
   
   const data = {
     name,
@@ -469,6 +560,7 @@ async function saveProduct() {
     stock: stock,
     sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()).filter(Boolean),
     desc: document.getElementById('fDesc').value,
+    cores: cores,
     images: finalImages,
     img: finalImages.length > 0 ? finalImages[0] : "",
     channelSite: document.getElementById('fChanSite').checked,
