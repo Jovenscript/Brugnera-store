@@ -191,7 +191,7 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .prod-modal-close { position: absolute; top: 20px; right: 25px; background: rgba(255,255,255,0.8); border: none; font-size: 1.5rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
 
 .prod-modal-img { flex: 1; position: relative; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; user-select: none; }
-.carousel-img { position: absolute; max-width: 100%; max-height: 100%; object-fit: contain; opacity: 0; transform: scale(1.03); transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out; pointer-events: none; }
+.carousel-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: scale(1.03); transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out; pointer-events: none; }
 .carousel-img.active { opacity: 1; transform: scale(1); }
 
 .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.3); color: white; border: none; width: 54px; height: 54px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; z-index: 10; display:flex; align-items:center; justify-content:center; backdrop-filter: blur(4px); transition: 0.2s;}
@@ -202,7 +202,7 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.3); cursor: pointer; transition: 0.3s; }
 .dot.active { background: white; transform: scale(1.2);}
 
-.prod-modal-info { width: 450px; background: var(--cream); padding: 60px 40px; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
+.prod-modal-info { width: 400px; background: var(--cream); padding: 60px 40px; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
 .prod-modal-info h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 16px; }
 .prod-modal-price { font-size: 1.8rem; font-weight: 300; margin-bottom: 8px; color: var(--gold); }
 .prod-modal-pix { font-size: 0.85rem; color: #4caf50; margin-bottom: 24px; font-weight: 500;}
@@ -252,7 +252,7 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   
   /* Modal Mobile */
   .prod-modal { flex-direction: column; }
-  .prod-modal-img { height: 60vh; flex: none; width: 100vw; }
+  .prod-modal-img { height: 68vh; flex: none; width: 100vw; }
   .prod-modal-info { width: 100vw; flex: 1; padding: 30px 20px; }
   .carousel-btn { width: 40px; height: 40px; font-size: 1.2rem; }
   .carousel-btn.prev { left: 10px; }
