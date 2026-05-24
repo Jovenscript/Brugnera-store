@@ -28,8 +28,20 @@ let selectedSize = null;
 // LÓGICA DO CARROSSEL
 let currentCarouselIndex = 0;
 let carouselImagesArray = [];
+let selectedColorIndex = 0; // qual cor o cliente está vendo no momento
 let touchstartX = 0;
 let touchendX = 0;
+
+// Retorna as CORES de um produto (cada uma com suas fotos).
+// Produtos antigos (sem 'cores') viram uma única cor com as fotos atuais.
+function getProductColors(p) {
+  if (p && p.cores && Array.isArray(p.cores)) {
+    const validas = p.cores.filter(c => c.imagens && c.imagens.length);
+    if (validas.length) return validas;
+  }
+  const imgs = (p && p.images && p.images.length) ? p.images : (p && p.img ? [p.img] : []);
+  return [{ nome: '', hex: '', imagens: imgs }];
+}
 
 // Variáveis para o Checkout com Frete
 let cartSubtotalValue = 0;
@@ -113,6 +125,10 @@ function renderProducts(list) {
     const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
     const disc = calcDiscount(p);
     const pix = fmt(p.price * 0.95);
+    const cores = getProductColors(p);
+    const dotsHtml = cores.length > 1
+      ? `<div class="card-colors">${cores.slice(0,5).map(c => `<span class="card-color-dot" style="background:${c.hex || '#ccc'}" title="${(c.nome||'').replace(/"/g,'&quot;')}"></span>`).join('')}${cores.length > 5 ? `<span class="card-color-more">+${cores.length - 5}</span>` : ''}</div>`
+      : '';
 
     // Badges baseados em dados REAIS (oferta, mais vendido, escassez real)
     const badges = [];
@@ -129,6 +145,7 @@ function renderProducts(list) {
       </div>
       <div class="product-info">
         <h3>${p.name}</h3>
+        ${dotsHtml}
         <div class="price-row">
           ${disc > 0 ? `<span class="price-old">R$ ${fmt(p.oldPrice)}</span>` : ''}
           <span class="price-now">R$ ${fmt(p.price)}</span>
@@ -155,11 +172,14 @@ function openProductModal(id) {
 
   currentProduct = p; 
   selectedSize = null;
-  
-  carouselImagesArray = p.images && p.images.length > 0 ? p.images : (p.img ? [p.img] : []);
+  selectedColorIndex = 0;
+
+  const cores = getProductColors(p);
+  carouselImagesArray = cores[0].imagens;
   currentCarouselIndex = 0;
   
   renderCarousel();
+  renderColorSwatches();
 
   document.getElementById('modalName').textContent = p.name;
 
@@ -204,6 +224,45 @@ function renderModalTrust() {
     <span>📦 Enviamos p/ todo o Brasil</span>
     <span>🔁 Troca facilitada</span>
   `;
+}
+
+function renderColorSwatches() {
+  const cores = getProductColors(currentProduct);
+  let el = document.getElementById('modalColors');
+
+  // Com 1 cor só (ou produto antigo) não mostra seletor de cor
+  if (cores.length <= 1) { if (el) el.style.display = 'none'; return; }
+
+  // Cria o bloco de cores 1x e encaixa logo acima do seletor de tamanho
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'modalColors';
+    el.className = 'modal-colors';
+    const sizesEl = document.getElementById('modalSizes');
+    if (sizesEl && sizesEl.parentNode) sizesEl.parentNode.insertBefore(el, sizesEl);
+  }
+  el.style.display = '';
+
+  const ativa = cores[selectedColorIndex] || cores[0];
+  el.innerHTML = `
+    <div class="modal-colors-label">Cor: <b>${(ativa.nome || 'Única').replace(/</g,'&lt;')}</b></div>
+    <div class="modal-colors-dots">
+      ${cores.map((c, i) => `
+        <button type="button" class="color-swatch ${i === selectedColorIndex ? 'active' : ''}"
+                title="${(c.nome || '').replace(/"/g,'&quot;')}" onclick="selectColor(${i})">
+          <span style="background:${c.hex || '#cccccc'}"></span>
+        </button>`).join('')}
+    </div>`;
+}
+
+function selectColor(i) {
+  const cores = getProductColors(currentProduct);
+  if (i < 0 || i >= cores.length) return;
+  selectedColorIndex = i;
+  carouselImagesArray = cores[i].imagens;
+  currentCarouselIndex = 0;
+  renderCarousel();
+  renderColorSwatches();
 }
 
 function renderCarousel() {
@@ -269,7 +328,9 @@ function addToCartFromModal() {
   if (!currentProduct) return;
   if (!selectedSize) { showToast('Selecione um tamanho para continuar.'); return; }
   
-  const existing = cart.find(i => i.id === currentProduct.id && i.size === selectedSize);
+  const cor = getProductColors(currentProduct)[selectedColorIndex] || {};
+  const corNome = cor.nome || '';
+  const existing = cart.find(i => i.id === currentProduct.id && i.size === selectedSize && (i.color || '') === corNome);
   
   if (existing) { 
     if(existing.qty < currentProduct.stock) {
@@ -278,8 +339,9 @@ function addToCartFromModal() {
       return showToast('Estoque máximo atingido!');
     }
   } else {
-    const cartImg = currentProduct.images && currentProduct.images.length > 0 ? currentProduct.images[0] : (currentProduct.img || '');
-    cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: cartImg, size: selectedSize, qty: 1 });
+    const cartImg = (cor.imagens && cor.imagens.length) ? cor.imagens[0]
+                    : (currentProduct.images && currentProduct.images.length ? currentProduct.images[0] : (currentProduct.img || ''));
+    cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: cartImg, size: selectedSize, color: corNome, qty: 1 });
   }
   
   saveCart();
@@ -301,16 +363,17 @@ function updateCartUI() {
     return;
   }
   
-  container.innerHTML = cart.map(item => `
+  container.innerHTML = cart.map((item, idx) => `
     <article class="cart-item">
       <img class="cart-item-img" src="${item.img}" alt="${item.name}">
       <div class="cart-item-info">
         <h4>${item.name}</h4>
+        ${item.color ? `<div class="size">Cor: ${item.color}</div>` : ''}
         <div class="size">Tamanho: ${item.size}</div>
         <div class="cart-item-qty">
-          <button class="qty-btn" onclick="changeQty('${item.id}', '${item.size}', -1)">−</button>
+          <button class="qty-btn" onclick="changeQty(${idx}, -1)">−</button>
           <span>${item.qty}</span>
-          <button class="qty-btn" onclick="changeQty('${item.id}', '${item.size}', 1)">+</button>
+          <button class="qty-btn" onclick="changeQty(${idx}, 1)">+</button>
         </div>
       </div>
       <div class="cart-item-price">R$ ${(item.price * item.qty).toFixed(2).replace('.',',')}</div>
@@ -318,15 +381,15 @@ function updateCartUI() {
   `).join('');
 }
 
-function changeQty(id, size, delta) {
-  const item = cart.find(i => i.id === id && i.size === size);
+function changeQty(index, delta) {
+  const item = cart[index];
   if (!item) return;
   
-  const p = onlineProducts.find(x => x.id === id);
+  const p = onlineProducts.find(x => x.id === item.id);
   if(delta > 0 && p && item.qty >= p.stock) return showToast("Estoque máximo atingido!");
 
   item.qty += delta;
-  if (item.qty <= 0) cart = cart.filter(i => !(i.id === id && i.size === size));
+  if (item.qty <= 0) cart.splice(index, 1);
   saveCart();
 }
 
@@ -464,7 +527,7 @@ async function confirmOnlinePurchase() {
   for(let item of cart) {
     const p = onlineProducts.find(x => x.id === item.id);
     if(p) totalCost += (p.cost || 0) * item.qty;
-    itemsArray.push(`${item.qty}x ${item.name} (Tam: ${item.size})`);
+    itemsArray.push(`${item.qty}x ${item.name}${item.color ? ' - ' + item.color : ''} (Tam: ${item.size})`);
   }
 
   const orderData = {
