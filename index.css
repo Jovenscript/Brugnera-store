@@ -263,3 +263,29 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   .footer-top { grid-template-columns: 1fr; }
   .checkout-box { width: 95%; padding: 20px; }
 }
+
+/* ===== SELETOR DE COR (variações) ===== */
+/* Bolinhas no modal do produto */
+.modal-colors { margin: 4px 0 14px; }
+.modal-colors-label { font-size: 0.8rem; color: var(--gray); margin-bottom: 8px; letter-spacing: 0.03em; }
+.modal-colors-label b { color: var(--black); font-weight: 600; }
+.modal-colors-dots { display: flex; flex-wrap: wrap; gap: 10px; }
+.color-swatch {
+  width: 34px; height: 34px; border-radius: 50%; padding: 3px;
+  background: none; border: 1.5px solid var(--border); cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s; display: inline-flex;
+}
+.color-swatch span {
+  width: 100%; height: 100%; border-radius: 50%; display: block;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+}
+.color-swatch:hover { transform: translateY(-2px); border-color: var(--gold); }
+.color-swatch.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(201,169,110,0.25); }
+
+/* Bolinhas pequenas no card da vitrine */
+.card-colors { display: flex; align-items: center; gap: 5px; margin: 2px 0 8px; }
+.card-color-dot {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 1px solid var(--border); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+}
+.card-color-more { font-size: 0.7rem; color: var(--gray); margin-left: 2px; }
