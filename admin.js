@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v3 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v4 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -42,6 +42,7 @@ let igImageBase64 = null;
 let productColors = [];   // [{ nome, hex, imagens: [base64...] }] — cada COR tem suas próprias fotos. A foto [0] de cada cor é a capa daquela cor.
 let activeColorIndex = 0; // qual cor está sendo editada agora no formulário
 let dragImgIndex = null;  // índice da foto sendo arrastada (drag & drop)
+let uploadsPending = 0;   // quantas fotos ainda estão subindo pro Storage (trava o salvar)
 
 // ==========================================
 // AUTENTICAÇÃO — GUARD DO ADMIN
@@ -184,7 +185,13 @@ function addImageFiles(files) {
   try {
     const storage = firebase.storage();
     console.log('✅ Storage inicializado:', storage);
-    
+
+    // Trava a cor de destino AGORA (no momento da seleção). Se o upload demorar e você
+    // trocar de cor no meio, a foto ainda vai pra cor certa.
+    const corAlvo = productColors[activeColorIndex];
+    const corNomeAlvo = corAlvo.nome || `Cor ${activeColorIndex + 1}`;
+    console.log('🎯 Estas fotos vão para a cor:', corNomeAlvo);
+
     toProcess.forEach((file, idx) => {
       console.log(`📁 Processando arquivo ${idx + 1}:`, file.name);
       const reader = new FileReader();
@@ -206,11 +213,13 @@ function addImageFiles(files) {
             console.log(`📤 Blob criado (${(blob.size / 1024).toFixed(1)}KB), iniciando upload...`);
             const filename = Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.jpg';
             const storageRef = storage.ref('product-images/' + filename);
+            uploadsPending++;
             const uploadTask = storageRef.put(blob, { contentType: 'image/jpeg' });
 
             uploadTask.on('state_changed',
               null,
               function(error) {
+                uploadsPending--;
                 console.error('❌ Erro no upload:', error);
                 alert('Erro ao subir foto: ' + error.message);
               },
@@ -218,10 +227,12 @@ function addImageFiles(files) {
                 console.log('✅ Upload completo, pegando URL...');
                 uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
                   console.log('🔗 URL obtida:', downloadURL);
-                  productColors[activeColorIndex].imagens.push(downloadURL);
+                  corAlvo.imagens.push(downloadURL);
+                  uploadsPending--;
                   renderColorManager();
-                  console.log('✅ Foto adicionada! Total agora:', productColors[activeColorIndex].imagens.length);
+                  console.log(`✅ Foto adicionada na cor "${corNomeAlvo}"! Ela tem agora ${corAlvo.imagens.length} foto(s). Uploads pendentes: ${uploadsPending}`);
                 }).catch(function(err) {
+                  uploadsPending--;
                   console.error('❌ Erro ao pegar URL:', err);
                   alert('Erro ao obter link da foto: ' + err.message);
                 });
@@ -250,6 +261,7 @@ function addColor() {
   if (productColors.length >= 12) { alert('Limite de 12 cores por produto.'); return; }
   productColors.push(novaCor('', '#888888'));
   activeColorIndex = productColors.length - 1;
+  console.log('🎨➕ Nova cor criada. Total de cores agora:', productColors.length, '| Cor ativa (índice):', activeColorIndex);
   renderColorManager();
 }
 function removeColor(i) {
@@ -571,6 +583,12 @@ function closeProdModal() { document.getElementById('prodModal').classList.remov
 function activateDraft(id) { openProductForm(id, true); }
 
 async function saveProduct() {
+  // Trava: não deixa salvar enquanto fotos ainda estão subindo
+  if (uploadsPending > 0) {
+    alert(`Aguarde — ${uploadsPending} foto(s) ainda estão subindo. Espere aparecer "✅ Foto adicionada" e tente salvar de novo. 🙂`);
+    return;
+  }
+
   const name = document.getElementById('fNome').value.trim();
   const stock = parseInt(document.getElementById('fEstoque').value) || 0;
   const cat = document.getElementById('fCat').value.trim();
@@ -583,6 +601,7 @@ async function saveProduct() {
     .filter(c => c.imagens.length > 0);
   cores.forEach((c, i) => { if (!c.nome) c.nome = `Cor ${i + 1}`; });
   const totalFotos = cores.reduce((n, c) => n + c.imagens.length, 0);
+  console.log('💾 Salvando produto. Cores que serão salvas:', cores.length, '→', cores.map(c => `${c.nome}(${c.imagens.length} foto)`).join(', ') || 'NENHUMA');
 
   // ---- Validações (prevenção de erros) ----
   if (!name) return alert("Nome é obrigatório.");
