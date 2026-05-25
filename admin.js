@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v5 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v6 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -385,9 +385,14 @@ function renderColorManager() {
         <span class="grade-total">Total: <b id="colorStockTotal">${totalCor}</b> un.</span>
       </div>
       <div class="grade-rows">
+        <div class="grade-labels">
+          <span class="grade-lbl-tam">Tamanho</span>
+          <span class="grade-lbl-est">Qtd. estoque</span>
+          <span class="grade-lbl-x"></span>
+        </div>
         ${grade.map((s, si) => `
           <div class="grade-row">
-            <input type="text" class="grade-tam" value="${(s.tamanho || '').replace(/"/g,'&quot;')}" placeholder="Tam" oninput="updateSizeName(${activeColorIndex}, ${si}, this.value)">
+            <input type="text" class="grade-tam" value="${(s.tamanho || '').replace(/"/g,'&quot;')}" placeholder="P" oninput="updateSizeName(${activeColorIndex}, ${si}, this.value)">
             <input type="number" class="grade-est" min="0" value="${parseInt(s.estoque) || 0}" placeholder="0" oninput="updateSizeStock(${activeColorIndex}, ${si}, this.value)">
             <button type="button" class="grade-del" title="Remover tamanho" onclick="removeSize(${activeColorIndex}, ${si})">✕</button>
           </div>`).join('')}
