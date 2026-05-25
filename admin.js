@@ -1,3 +1,5 @@
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v3 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
 // ==========================================
@@ -151,6 +153,8 @@ function novaCor(nome = '', hex = '#888888') { return { nome, hex, imagens: [] }
 function fotosAtivas() { return productColors[activeColorIndex] ? productColors[activeColorIndex].imagens : []; }
 
 function addImageFiles(files) {
+  console.log('🟢 addImageFiles chamada com', files.length, 'arquivos');
+  
   if (!productColors[activeColorIndex]) { productColors.push(novaCor()); activeColorIndex = 0; }
   const alvo = productColors[activeColorIndex].imagens;
   const remaining = MAX_PRODUCT_IMAGES - alvo.length;
@@ -161,10 +165,12 @@ function addImageFiles(files) {
 
   // Validação: só imagens e dentro do tamanho máximo
   const onlyImages = files.filter(f => f.type && f.type.startsWith('image/'));
+  console.log('🟡 Após filtro de tipo:', onlyImages.length, 'imagens válidas');
   if (onlyImages.length !== files.length) {
     alert('Alguns arquivos foram ignorados por não serem imagens.');
   }
   const validSize = onlyImages.filter(f => f.size <= MAX_IMAGE_MB * 1024 * 1024);
+  console.log('🟡 Após filtro de tamanho:', validSize.length, 'dentro do limite');
   if (validSize.length !== onlyImages.length) {
     alert(`Algumas fotos foram ignoradas por passarem de ${MAX_IMAGE_MB}MB.`);
   }
@@ -174,42 +180,69 @@ function addImageFiles(files) {
     alert(`Só cabem mais ${remaining} foto(s). As demais foram ignoradas.`);
   }
 
-  const storage = firebase.storage();
-  toProcess.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        let scaleSize = 800 / img.width; 
-        if (scaleSize > 1) scaleSize = 1;
-        canvas.width = img.width * scaleSize;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  console.log('🔵 Inicializando firebase.storage...');
+  try {
+    const storage = firebase.storage();
+    console.log('✅ Storage inicializado:', storage);
+    
+    toProcess.forEach((file, idx) => {
+      console.log(`📁 Processando arquivo ${idx + 1}:`, file.name);
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        console.log(`🖼️ FileReader carregou arquivo ${idx + 1}`);
+        const img = new Image();
+        img.onload = function() {
+          console.log(`🎨 Imagem ${idx + 1} carregada, criando canvas...`);
+          const canvas = document.createElement('canvas');
+          let scaleSize = 800 / img.width; 
+          if (scaleSize > 1) scaleSize = 1;
+          canvas.width = img.width * scaleSize;
+          canvas.height = img.height * scaleSize;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // Sobe pro Firebase Storage (almoxarifado) e pega o link
-        canvas.toBlob(function(blob) {
-          const filename = Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.jpg';
-          const storageRef = storage.ref('product-images/' + filename);
-          const uploadTask = storageRef.put(blob, { contentType: 'image/jpeg' });
+          console.log(`☁️ Convertendo para blob e subindo ${idx + 1}...`);
+          canvas.toBlob(function(blob) {
+            console.log(`📤 Blob criado (${(blob.size / 1024).toFixed(1)}KB), iniciando upload...`);
+            const filename = Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.jpg';
+            const storageRef = storage.ref('product-images/' + filename);
+            const uploadTask = storageRef.put(blob, { contentType: 'image/jpeg' });
 
-          uploadTask.on('state_changed',
-            null, // podemos adicionar barra de progresso depois
-            function(error) { alert('Erro ao subir foto: ' + error.message); },
-            function() {
-              uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
-                productColors[activeColorIndex].imagens.push(downloadURL);
-                renderColorManager();
-              });
-            }
-          );
-        }, 'image/jpeg', 0.72);
+            uploadTask.on('state_changed',
+              null,
+              function(error) {
+                console.error('❌ Erro no upload:', error);
+                alert('Erro ao subir foto: ' + error.message);
+              },
+              function() {
+                console.log('✅ Upload completo, pegando URL...');
+                uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+                  console.log('🔗 URL obtida:', downloadURL);
+                  productColors[activeColorIndex].imagens.push(downloadURL);
+                  renderColorManager();
+                  console.log('✅ Foto adicionada! Total agora:', productColors[activeColorIndex].imagens.length);
+                }).catch(function(err) {
+                  console.error('❌ Erro ao pegar URL:', err);
+                  alert('Erro ao obter link da foto: ' + err.message);
+                });
+              }
+            );
+          }, 'image/jpeg', 0.72);
+        };
+        img.onerror = function() {
+          console.error('❌ Erro ao carregar imagem', idx + 1);
+        };
+        img.src = event.target.result;
       };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
+      reader.onerror = function() {
+        console.error('❌ Erro no FileReader', idx + 1);
+      };
+      reader.readAsDataURL(file);
+    });
+  } catch(e) {
+    console.error('❌ ERRO CRÍTICO ao inicializar Storage:', e);
+    alert('Erro ao acessar o Storage: ' + e.message + '\n\nVerifique se o script do Storage foi carregado no HTML.');
+  }
 }
 
 // ---- Gerenciamento das CORES (abas) ----
