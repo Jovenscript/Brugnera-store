@@ -247,3 +247,39 @@ tbody tr:hover td { background:var(--surface2); }
   .color-field { flex:1; }
   .color-remove-btn { margin-left:0; }
 }
+
+/* ===== GRADE: tamanho + estoque por cor ===== */
+.grade-section {
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; margin-bottom: 14px;
+}
+.grade-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.grade-title { font-size: 0.78rem; color: var(--text2); letter-spacing: 0.03em; }
+.grade-total { font-size: 0.78rem; color: var(--text2); }
+.grade-total b { color: var(--gold); font-size: 0.95rem; }
+.grade-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.grade-row { display: flex; align-items: center; gap: 8px; }
+.grade-tam {
+  flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; font-family: inherit; text-transform: uppercase;
+}
+.grade-est {
+  width: 90px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; font-family: inherit; text-align: center;
+}
+.grade-tam:focus, .grade-est:focus { border-color: var(--gold); outline: none; }
+.grade-del {
+  width: 32px; height: 32px; flex-shrink: 0; border: 1px solid var(--border);
+  background: transparent; color: var(--rose); border-radius: 8px; cursor: pointer; font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.grade-del:hover { border-color: var(--rose); background: rgba(212,133,122,0.12); }
+.grade-add {
+  background: transparent; border: 1px dashed var(--border); color: var(--gold);
+  border-radius: 8px; padding: 7px 14px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  transition: all 0.15s;
+}
+.grade-add:hover { border-color: var(--gold); background: rgba(201,169,110,0.08); }
+
+/* dica visual: rótulos das colunas */
+.grade-rows .grade-row:first-child { position: relative; }
