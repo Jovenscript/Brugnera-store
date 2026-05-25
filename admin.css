@@ -258,15 +258,19 @@ tbody tr:hover td { background:var(--surface2); }
 .grade-total { font-size: 0.78rem; color: var(--text2); }
 .grade-total b { color: var(--gold); font-size: 0.95rem; }
 .grade-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.grade-labels { display: flex; gap: 8px; padding: 0 2px 2px; }
+.grade-lbl-tam, .grade-lbl-est {
+  width: 120px; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--gold); font-weight: 600;
+}
+.grade-lbl-x { width: 32px; flex-shrink: 0; }
 .grade-row { display: flex; align-items: center; gap: 8px; }
-.grade-tam {
-  flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-  border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; font-family: inherit; text-transform: uppercase;
+.grade-tam, .grade-est {
+  width: 120px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 9px 10px; font-size: 0.9rem; font-family: inherit;
 }
-.grade-est {
-  width: 90px; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-  border-radius: 8px; padding: 8px 10px; font-size: 0.85rem; font-family: inherit; text-align: center;
-}
+.grade-tam { text-transform: uppercase; font-weight: 600; text-align: center; }
+.grade-est { text-align: center; }
 .grade-tam:focus, .grade-est:focus { border-color: var(--gold); outline: none; }
 .grade-del {
   width: 32px; height: 32px; flex-shrink: 0; border: 1px solid var(--border);
