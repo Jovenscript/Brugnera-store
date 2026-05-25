@@ -174,6 +174,7 @@ function addImageFiles(files) {
     alert(`Só cabem mais ${remaining} foto(s). As demais foram ignoradas.`);
   }
 
+  const storage = firebase.storage();
   toProcess.forEach(file => {
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -186,10 +187,24 @@ function addImageFiles(files) {
         canvas.height = img.height * scaleSize;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
 
-        productColors[activeColorIndex].imagens.push(dataUrl);
-        renderColorManager();
+        // Sobe pro Firebase Storage (almoxarifado) e pega o link
+        canvas.toBlob(function(blob) {
+          const filename = Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.jpg';
+          const storageRef = storage.ref('product-images/' + filename);
+          const uploadTask = storageRef.put(blob, { contentType: 'image/jpeg' });
+
+          uploadTask.on('state_changed',
+            null, // podemos adicionar barra de progresso depois
+            function(error) { alert('Erro ao subir foto: ' + error.message); },
+            function() {
+              uploadTask.snapshot.ref.getDownloadURL().then(function(downloadURL) {
+                productColors[activeColorIndex].imagens.push(downloadURL);
+                renderColorManager();
+              });
+            }
+          );
+        }, 'image/jpeg', 0.72);
       };
       img.src = event.target.result;
     };
@@ -548,9 +563,21 @@ async function saveProduct() {
     return;
   }
 
-  // A capa do produto na vitrine/PDV é a 1ª foto da 1ª cor (mantém compatibilidade com images/img).
+  // A capa do produto = 1ª foto da 1ª cor. NÃO duplicamos o resto das fotos em 'images'
+  // (elas já vivem em 'cores'); guardamos só a capa para compatibilidade com PDV/carrinho/tabela.
   const imgBase64 = document.getElementById('fImgBase64') ? document.getElementById('fImgBase64').value : '';
-  const finalImages = cores.length > 0 ? cores[0].imagens : (imgBase64 ? [imgBase64] : []);
+  const cover = cores.length > 0 ? cores[0].imagens[0] : (imgBase64 || '');
+
+  // Guarda de tamanho: o Firestore recusa documentos acima de 1 MB.
+  const approxBytes = new Blob([JSON.stringify(cores)]).size;
+  if (approxBytes > 950000) {
+    alert(
+      `As fotos deste produto estão pesadas demais (${(approxBytes / 1024 / 1024).toFixed(2)} MB) e passam do limite de 1 MB por produto do banco.\n\n` +
+      `Dica rápida: use menos fotos por cor (ou fotos menores) por enquanto.\n` +
+      `Em breve vamos guardar as fotos no Firebase Storage — aí esse limite acaba.`
+    );
+    return;
+  }
   
   const data = {
     name,
@@ -561,8 +588,8 @@ async function saveProduct() {
     sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()).filter(Boolean),
     desc: document.getElementById('fDesc').value,
     cores: cores,
-    images: finalImages,
-    img: finalImages.length > 0 ? finalImages[0] : "",
+    images: cover ? [cover] : [],
+    img: cover,
     channelSite: document.getElementById('fChanSite').checked,
     channelShopee: document.getElementById('fChanShopee').checked,
     channelPdv: true,
@@ -583,7 +610,12 @@ async function saveProduct() {
     }
     closeProdModal();
   } catch(e) {
-    alert("Erro ao salvar: " + e.message);
+    const msg = (e && e.message) ? e.message.toLowerCase() : '';
+    if (msg.includes('size') || msg.includes('1048487') || msg.includes('bytes')) {
+      alert("As fotos ficaram pesadas demais para o banco (limite de 1 MB por produto). Use menos fotos ou fotos menores por enquanto. 🙂");
+    } else {
+      alert("Erro ao salvar: " + (e.message || e));
+    }
   } finally {
     document.getElementById('btnSalvarProd').textContent = "Salvar Produto";
   }
