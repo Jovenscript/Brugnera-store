@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v4 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v5 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -149,7 +149,13 @@ function initApp() {
 //  - Reordena (arrastar no desktop / botões ◀ ▶ no celular)
 // ==========================================
 // Cria uma nova cor vazia
-function novaCor(nome = '', hex = '#888888') { return { nome, hex, imagens: [] }; }
+function novaCor(nome = '', hex = '#888888') {
+  return { nome, hex, imagens: [], grade: [
+    { tamanho: 'P', estoque: 0 },
+    { tamanho: 'M', estoque: 0 },
+    { tamanho: 'G', estoque: 0 }
+  ]};
+}
 // Retorna o array de fotos da COR que está sendo editada agora
 function fotosAtivas() { return productColors[activeColorIndex] ? productColors[activeColorIndex].imagens : []; }
 
@@ -291,6 +297,36 @@ function updateColorHex(i, value) {
   if (dot) dot.style.background = value;
 }
 
+// ---- Gerenciamento da GRADE (tamanho + estoque de cada cor) ----
+function gradeDaCor(ci) {
+  if (!productColors[ci]) return [];
+  if (!Array.isArray(productColors[ci].grade)) productColors[ci].grade = [];
+  return productColors[ci].grade;
+}
+function addSize(ci) {
+  gradeDaCor(ci).push({ tamanho: '', estoque: 0 });
+  renderColorManager();
+}
+function removeSize(ci, si) {
+  const g = gradeDaCor(ci);
+  if (si < 0 || si >= g.length) return;
+  g.splice(si, 1);
+  renderColorManager();
+}
+// Não re-renderiza ao digitar (pra não perder o foco do campo)
+function updateSizeName(ci, si, value) {
+  const g = gradeDaCor(ci);
+  if (g[si]) g[si].tamanho = value;
+}
+function updateSizeStock(ci, si, value) {
+  const g = gradeDaCor(ci);
+  if (!g[si]) return;
+  g[si].estoque = Math.max(0, parseInt(value) || 0);
+  // Atualiza só o total exibido, sem re-render completo
+  const totalEl = document.getElementById('colorStockTotal');
+  if (totalEl) totalEl.textContent = g.reduce((n, s) => n + (parseInt(s.estoque) || 0), 0);
+}
+
 function renderColorManager() {
   const container = document.getElementById('imgPreviewContainer');
   if (!container) return;
@@ -340,6 +376,25 @@ function renderColorManager() {
           </div>`).join('')}
       </div>`;
 
+  const grade = Array.isArray(ativa.grade) ? ativa.grade : [];
+  const totalCor = grade.reduce((n, s) => n + (parseInt(s.estoque) || 0), 0);
+  const gradeHtml = `
+    <div class="grade-section">
+      <div class="grade-head">
+        <span class="grade-title">Tamanhos e estoque desta cor</span>
+        <span class="grade-total">Total: <b id="colorStockTotal">${totalCor}</b> un.</span>
+      </div>
+      <div class="grade-rows">
+        ${grade.map((s, si) => `
+          <div class="grade-row">
+            <input type="text" class="grade-tam" value="${(s.tamanho || '').replace(/"/g,'&quot;')}" placeholder="Tam" oninput="updateSizeName(${activeColorIndex}, ${si}, this.value)">
+            <input type="number" class="grade-est" min="0" value="${parseInt(s.estoque) || 0}" placeholder="0" oninput="updateSizeStock(${activeColorIndex}, ${si}, this.value)">
+            <button type="button" class="grade-del" title="Remover tamanho" onclick="removeSize(${activeColorIndex}, ${si})">✕</button>
+          </div>`).join('')}
+      </div>
+      <button type="button" class="grade-add" onclick="addSize(${activeColorIndex})">+ Tamanho</button>
+    </div>`;
+
   container.className = 'color-manager';
   container.innerHTML = `
     <div class="color-tabs">
@@ -358,6 +413,7 @@ function renderColorManager() {
         </label>
         ${productColors.length > 1 ? `<button type="button" class="color-remove-btn" onclick="removeColor(${activeColorIndex})">✕ Excluir cor</button>` : ''}
       </div>
+      ${gradeHtml}
       <div class="img-manager-counter">${fotos.length}/${MAX_PRODUCT_IMAGES} fotos desta cor &bull; a 1ª é a capa &bull; arraste para reordenar</div>
       ${grid}
     </div>`;
@@ -561,17 +617,35 @@ function openProductForm(id = null, isDraft = false) {
   if(document.getElementById('fImgFile')) document.getElementById('fImgFile').value = '';
   if(document.getElementById('fImgBase64')) document.getElementById('fImgBase64').value = p?.img || '';
 
-  // Carrega as CORES existentes. Produtos antigos (sem 'cores') viram uma única cor "Padrão" com as fotos atuais.
+  // Carrega as CORES com suas GRADES (tamanho+estoque). Migra produtos antigos.
   if (p?.cores && Array.isArray(p.cores) && p.cores.length) {
     productColors = p.cores.map(c => ({
       nome: c.nome || '',
       hex: c.hex || '#888888',
-      imagens: Array.isArray(c.imagens) ? [...c.imagens] : []
+      imagens: Array.isArray(c.imagens) ? [...c.imagens] : [],
+      grade: (Array.isArray(c.grade) && c.grade.length)
+        ? c.grade.map(s => ({ tamanho: s.tamanho || '', estoque: parseInt(s.estoque) || 0 }))
+        : null
     }));
   } else {
     const legacy = (p?.images && p.images.length) ? [...p.images] : (p?.img ? [p.img] : []);
-    productColors = [ { nome: 'Padrão', hex: '#888888', imagens: legacy } ];
+    productColors = [ { nome: 'Padrão', hex: '#888888', imagens: legacy, grade: null } ];
   }
+
+  // Preenche grades que faltam a partir dos tamanhos/estoque antigos do produto.
+  // Pra não perder estoque, joga o total do produto no 1º tamanho da 1ª cor.
+  const baseSizes = (p?.sizes && p.sizes.length) ? p.sizes : ['P', 'M', 'G'];
+  const stockLegado = parseInt(p?.stock) || 0;
+  productColors.forEach((c, ci) => {
+    if (!c.grade) {
+      c.grade = baseSizes.map((t, si) => ({ tamanho: t, estoque: (ci === 0 && si === 0) ? stockLegado : 0 }));
+    }
+  });
+
+  // Tamanho e estoque agora são POR COR — esconde os campos antigos do produto inteiro
+  const rowAntigo = document.getElementById('fTamanhos') ? document.getElementById('fTamanhos').closest('.form-row2') : null;
+  if (rowAntigo) rowAntigo.style.display = 'none';
+
   activeColorIndex = 0;
   renderColorManager();
 
@@ -590,18 +664,28 @@ async function saveProduct() {
   }
 
   const name = document.getElementById('fNome').value.trim();
-  const stock = parseInt(document.getElementById('fEstoque').value) || 0;
   const cat = document.getElementById('fCat').value.trim();
   const cost = parseFloat(document.getElementById('fCusto').value) || 0;
   const price = parseFloat(document.getElementById('fPreco').value) || 0;
 
-  // Monta as cores válidas (precisa ter pelo menos 1 foto). Nomeia automaticamente as sem nome.
+  // Monta as cores válidas (precisa ter pelo menos 1 foto), cada uma com sua GRADE limpa.
   const cores = productColors
-    .map(c => ({ nome: (c.nome || '').trim(), hex: c.hex || '#888888', imagens: c.imagens || [] }))
+    .map(c => ({
+      nome: (c.nome || '').trim(),
+      hex: c.hex || '#888888',
+      imagens: c.imagens || [],
+      grade: (Array.isArray(c.grade) ? c.grade : [])
+        .map(s => ({ tamanho: (s.tamanho || '').trim().toUpperCase(), estoque: Math.max(0, parseInt(s.estoque) || 0) }))
+        .filter(s => s.tamanho)
+    }))
     .filter(c => c.imagens.length > 0);
   cores.forEach((c, i) => { if (!c.nome) c.nome = `Cor ${i + 1}`; });
   const totalFotos = cores.reduce((n, c) => n + c.imagens.length, 0);
-  console.log('💾 Salvando produto. Cores que serão salvas:', cores.length, '→', cores.map(c => `${c.nome}(${c.imagens.length} foto)`).join(', ') || 'NENHUMA');
+
+  // Estoque total (soma das grades) e tamanhos (união) — pra compatibilidade com tabela/PDV/dashboard.
+  const totalStock = cores.reduce((n, c) => n + c.grade.reduce((m, s) => m + s.estoque, 0), 0);
+  const allSizes = [...new Set(cores.flatMap(c => c.grade.map(s => s.tamanho)))];
+  console.log('💾 Salvando. Cores:', cores.map(c => `${c.nome}[${c.grade.map(s => s.tamanho + ':' + s.estoque).join(' ')}]`).join(' | ') || 'NENHUMA', '| Estoque total:', totalStock);
 
   // ---- Validações (prevenção de erros) ----
   if (!name) return alert("Nome é obrigatório.");
@@ -636,8 +720,8 @@ async function saveProduct() {
     category: cat,
     cost: cost,
     price: price,
-    stock: stock,
-    sizes: document.getElementById('fTamanhos').value.split(',').map(s => s.trim()).filter(Boolean),
+    stock: totalStock,
+    sizes: allSizes,
     desc: document.getElementById('fDesc').value,
     cores: cores,
     images: cover ? [cover] : [],
