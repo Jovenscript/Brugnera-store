@@ -289,3 +289,10 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   border: 1px solid var(--border); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
 }
 .card-color-more { font-size: 0.7rem; color: var(--gray); margin-left: 2px; }
+
+/* Tamanho esgotado na cor selecionada */
+.size-btn.sold-out, .size-btn:disabled {
+  opacity: 0.45; cursor: not-allowed; text-decoration: line-through;
+  border-color: var(--border); background: none; color: var(--gray);
+}
+.size-btn.sold-out:hover { background: none; color: var(--gray); border-color: var(--border); }
