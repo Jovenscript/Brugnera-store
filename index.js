@@ -37,10 +37,26 @@ let touchendX = 0;
 function getProductColors(p) {
   if (p && p.cores && Array.isArray(p.cores)) {
     const validas = p.cores.filter(c => c.imagens && c.imagens.length);
-    if (validas.length) return validas;
+    if (validas.length) return validas.map(c => ({
+      nome: c.nome || '', hex: c.hex || '', imagens: c.imagens,
+      grade: Array.isArray(c.grade) ? c.grade : []
+    }));
   }
+  // Legado: uma cor só. Monta a grade a partir dos tamanhos/estoque do produto.
   const imgs = (p && p.images && p.images.length) ? p.images : (p && p.img ? [p.img] : []);
-  return [{ nome: '', hex: '', imagens: imgs }];
+  const sizes = (p && p.sizes && p.sizes.length) ? p.sizes : ['U'];
+  const stock = parseInt(p && p.stock) || 0;
+  const grade = sizes.map(t => ({ tamanho: t, estoque: stock })); // legado: todos os tamanhos usam o estoque do produto
+  return [{ nome: '', hex: '', imagens: imgs, grade }];
+}
+
+// Estoque de uma variação específica (cor + tamanho)
+function getVariantStock(p, colorName, size) {
+  const cores = getProductColors(p);
+  const cor = cores.find(c => (c.nome || '') === (colorName || '')) || cores[0];
+  if (!cor) return 0;
+  const item = (cor.grade || []).find(s => s.tamanho === size);
+  return item ? (parseInt(item.estoque) || 0) : 0;
 }
 
 // Variáveis para o Checkout com Frete
@@ -195,10 +211,9 @@ function openProductModal(id) {
   const pixPrice = fmt(p.price * 0.95);
   document.getElementById('modalPix').textContent = `R$ ${pixPrice} no Pix (5% off)`;
   document.getElementById('modalDesc').textContent = p.desc || "Peça exclusiva Brugnera Store.";
-  document.getElementById('modalStock').textContent = p.stock <= 3 ? `⚠️ Últimas ${p.stock} unidades em estoque!` : `✓ ${p.stock} unidades disponíveis`;
-  
-  const sizes = p.sizes || ['U'];
-  document.getElementById('modalSizes').innerHTML = sizes.map(s => `<button class="size-btn" onclick="selectSize('${s}', this)">${s}</button>`).join('');
+
+  // Tamanhos + estoque da COR selecionada (atualiza a mensagem de estoque também)
+  renderModalSizes();
 
   // Sinais de confiança (criados via JS — não precisa mexer no HTML)
   renderModalTrust();
@@ -263,6 +278,50 @@ function selectColor(i) {
   currentCarouselIndex = 0;
   renderCarousel();
   renderColorSwatches();
+  renderModalSizes(); // troca os tamanhos/estoque pra os desta cor
+}
+
+// Renderiza os botões de tamanho da COR ativa (esgotado = riscado e desabilitado)
+function renderModalSizes() {
+  const cont = document.getElementById('modalSizes');
+  if (!cont || !currentProduct) return;
+  const cores = getProductColors(currentProduct);
+  const cor = cores[selectedColorIndex] || cores[0];
+  const grade = (cor && Array.isArray(cor.grade)) ? cor.grade : [];
+
+  selectedSize = null; // ao trocar de cor, zera o tamanho escolhido
+
+  if (!grade.length) {
+    const sizes = currentProduct.sizes || ['U'];
+    cont.innerHTML = sizes.map(s => `<button class="size-btn" onclick="selectSize('${s}', this)">${s}</button>`).join('');
+  } else {
+    cont.innerHTML = grade.map(s => {
+      const esgotado = (parseInt(s.estoque) || 0) <= 0;
+      const tam = (s.tamanho || '').replace(/'/g, '');
+      return `<button class="size-btn ${esgotado ? 'sold-out' : ''}" ${esgotado ? 'disabled' : ''} onclick="selectSize('${tam}', this)">${s.tamanho}</button>`;
+    }).join('');
+  }
+  atualizarStockMsg();
+}
+
+// Atualiza a mensagem de estoque conforme cor + tamanho escolhidos
+function atualizarStockMsg() {
+  const el = document.getElementById('modalStock');
+  if (!el || !currentProduct) return;
+  const cores = getProductColors(currentProduct);
+  const cor = cores[selectedColorIndex] || cores[0];
+  const grade = (cor && Array.isArray(cor.grade)) ? cor.grade : [];
+  const totalCor = grade.reduce((n, s) => n + (parseInt(s.estoque) || 0), 0);
+
+  if (!selectedSize) {
+    el.textContent = totalCor <= 0 ? 'Esgotado nesta cor 😔' : 'Selecione um tamanho';
+    return;
+  }
+  const item = grade.find(s => s.tamanho === selectedSize);
+  const est = item ? (parseInt(item.estoque) || 0) : 0;
+  if (est <= 0) el.textContent = `Tamanho ${selectedSize} esgotado nesta cor`;
+  else if (est <= 3) el.textContent = `⚠️ Últimas ${est} no tamanho ${selectedSize}!`;
+  else el.textContent = `✓ ${est} disponíveis no tamanho ${selectedSize}`;
 }
 
 function renderCarousel() {
@@ -308,6 +367,7 @@ function selectSize(size, btn) {
   selectedSize = size;
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  atualizarStockMsg();
 }
 
 function closeProdModal() {
@@ -327,23 +387,23 @@ function saveCart() { localStorage.setItem('brugnera_cart', JSON.stringify(cart)
 function addToCartFromModal() {
   if (!currentProduct) return;
   if (!selectedSize) { showToast('Selecione um tamanho para continuar.'); return; }
-  
+
   const cor = getProductColors(currentProduct)[selectedColorIndex] || {};
   const corNome = cor.nome || '';
+  const variantStock = getVariantStock(currentProduct, corNome, selectedSize);
+
+  if (variantStock <= 0) { showToast('Esse tamanho/cor está esgotado.'); return; }
+
   const existing = cart.find(i => i.id === currentProduct.id && i.size === selectedSize && (i.color || '') === corNome);
-  
-  if (existing) { 
-    if(existing.qty < currentProduct.stock) {
-      existing.qty++; 
-    } else {
-      return showToast('Estoque máximo atingido!');
-    }
+  if (existing) {
+    if (existing.qty < variantStock) existing.qty++;
+    else return showToast('Estoque máximo atingido!');
   } else {
     const cartImg = (cor.imagens && cor.imagens.length) ? cor.imagens[0]
                     : (currentProduct.images && currentProduct.images.length ? currentProduct.images[0] : (currentProduct.img || ''));
     cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: cartImg, size: selectedSize, color: corNome, qty: 1 });
   }
-  
+
   saveCart();
   closeProdModal();
   showToast(`✓ ${currentProduct.name} adicionado ao carrinho`);
@@ -386,7 +446,10 @@ function changeQty(index, delta) {
   if (!item) return;
   
   const p = onlineProducts.find(x => x.id === item.id);
-  if(delta > 0 && p && item.qty >= p.stock) return showToast("Estoque máximo atingido!");
+  if (delta > 0 && p) {
+    const vstock = getVariantStock(p, item.color || '', item.size);
+    if (item.qty >= vstock) return showToast("Estoque máximo atingido!");
+  }
 
   item.qty += delta;
   if (item.qty <= 0) cart.splice(index, 1);
