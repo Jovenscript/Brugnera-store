@@ -35,12 +35,15 @@ let touchendX = 0;
 // Retorna as CORES de um produto (cada uma com suas fotos).
 // Produtos antigos (sem 'cores') viram uma única cor com as fotos atuais.
 function getProductColors(p) {
-  if (p && p.cores && Array.isArray(p.cores)) {
-    const validas = p.cores.filter(c => c.imagens && c.imagens.length);
-    if (validas.length) return validas.map(c => ({
-      nome: c.nome || '', hex: c.hex || '', imagens: c.imagens,
-      grade: Array.isArray(c.grade) ? c.grade : []
-    }));
+  if (p && Array.isArray(p.cores) && p.cores.length) {
+    // Foto de capa pra usar em cores que não têm foto própria (assim a cor não some da vitrine)
+    const primeiraComFoto = p.cores.find(c => c.imagens && c.imagens.length);
+    const fallback = p.img || (p.images && p.images[0]) || (primeiraComFoto ? primeiraComFoto.imagens[0] : '') || '';
+    const cores = p.cores.map(c => {
+      const imgs = (c.imagens && c.imagens.length) ? c.imagens : (fallback ? [fallback] : []);
+      return { nome: c.nome || '', hex: c.hex || '', imagens: imgs, grade: Array.isArray(c.grade) ? c.grade : [] };
+    }).filter(c => c.imagens.length > 0); // só descarta se não existe NENHUMA imagem disponível
+    if (cores.length) return cores;
   }
   // Legado: uma cor só. Monta a grade a partir dos tamanhos/estoque do produto.
   const imgs = (p && p.images && p.images.length) ? p.images : (p && p.img ? [p.img] : []);
