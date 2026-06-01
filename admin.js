@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v6 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v8 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -568,7 +568,7 @@ function renderProdTable() {
       <td><strong>${p.name}</strong><br><small style="color:var(--text2)">${p.category}</small></td>
       <td style="color:var(--text2)">R$ ${(p.cost||0).toFixed(2).replace('.',',')}</td>
       <td>R$ ${(p.price||0).toFixed(2).replace('.',',')}</td>
-      <td style="color:${p.stock<=3?'var(--rose)':'var(--green)'}"><b>${p.stock}</b> un.</td>
+      <td>${stockBadge(p)}</td>
       <td><span class="status-badge pago">Ativo</span></td>
       <td style="display:flex;gap:6px;padding:14px 16px">
         <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">Editar</button>
@@ -673,31 +673,44 @@ async function saveProduct() {
   const cost = parseFloat(document.getElementById('fCusto').value) || 0;
   const price = parseFloat(document.getElementById('fPreco').value) || 0;
 
-  // Monta as cores válidas (precisa ter pelo menos 1 foto), cada uma com sua GRADE limpa.
-  const cores = productColors
-    .map(c => ({
-      nome: (c.nome || '').trim(),
-      hex: c.hex || '#888888',
-      imagens: c.imagens || [],
-      grade: (Array.isArray(c.grade) ? c.grade : [])
-        .map(s => ({ tamanho: (s.tamanho || '').trim().toUpperCase(), estoque: Math.max(0, parseInt(s.estoque) || 0) }))
-        .filter(s => s.tamanho)
-    }))
-    .filter(c => c.imagens.length > 0);
+  // Monta as cores, cada uma com sua GRADE limpa.
+  const coresBrutas = productColors.map(c => ({
+    nome: (c.nome || '').trim(),
+    hex: c.hex || '#888888',
+    imagens: c.imagens || [],
+    grade: (Array.isArray(c.grade) ? c.grade : [])
+      .map(s => ({ tamanho: (s.tamanho || '').trim().toUpperCase(), estoque: Math.max(0, parseInt(s.estoque) || 0) }))
+      .filter(s => s.tamanho)
+  }));
+
+  // ⚠️ FIX: NÃO descartamos cor só por estar sem foto (era isso que sumia com as variações!).
+  // Mantém toda cor que a pessoa preencheu: tem foto OU tem estoque OU tem nome.
+  // (Descarta só cor totalmente vazia — criada sem querer e não tocada.)
+  const cores = coresBrutas.filter(c =>
+    c.imagens.length > 0 || c.grade.some(s => s.estoque > 0) || c.nome.length > 0
+  );
   cores.forEach((c, i) => { if (!c.nome) c.nome = `Cor ${i + 1}`; });
   const totalFotos = cores.reduce((n, c) => n + c.imagens.length, 0);
 
   // Estoque total (soma das grades) e tamanhos (união) — pra compatibilidade com tabela/PDV/dashboard.
   const totalStock = cores.reduce((n, c) => n + c.grade.reduce((m, s) => m + s.estoque, 0), 0);
   const allSizes = [...new Set(cores.flatMap(c => c.grade.map(s => s.tamanho)))];
-  console.log('💾 Salvando. Cores:', cores.map(c => `${c.nome}[${c.grade.map(s => s.tamanho + ':' + s.estoque).join(' ')}]`).join(' | ') || 'NENHUMA', '| Estoque total:', totalStock);
+  console.log('💾 Salvando. Cores:', cores.map(c => `${c.nome}[${c.grade.map(s => s.tamanho + ':' + s.estoque).join(' ')}]${c.imagens.length ? '' : ' (sem foto)'}`).join(' | ') || 'NENHUMA', '| Estoque total:', totalStock);
 
   // ---- Validações (prevenção de erros) ----
   if (!name) return alert("Nome é obrigatório.");
   if (!cat) return alert("Categoria é obrigatória.");
-  if (totalFotos === 0 &&
-      !confirm("Este produto está sem fotos. Sem capa ele fica feio na vitrine. Salvar mesmo assim?")) {
-    return;
+  if (cores.length === 0) return alert("Adicione pelo menos uma cor com foto, estoque ou nome.");
+
+  // Avisa (SEM perder dados!) sobre cores que serão salvas sem foto própria.
+  const semFoto = cores.filter(c => c.imagens.length === 0).map(c => c.nome);
+  if (semFoto.length > 0) {
+    const ok = confirm(
+      `As cores a seguir estão SEM foto própria: ${semFoto.join(', ')}.\n\n` +
+      `✅ Elas SERÃO salvas com seus tamanhos e estoque (nada será perdido). Na vitrine vão usar a foto de capa até você adicionar fotos próprias delas.\n\n` +
+      `OK = salvar assim mesmo  •  Cancelar = voltar e adicionar as fotos`
+    );
+    if (!ok) return;
   }
   if (price > 0 && cost > 0 && price < cost &&
       !confirm("⚠️ O preço de VENDA está menor que o CUSTO — isso dá prejuízo. Deseja continuar mesmo assim?")) {
@@ -939,23 +952,85 @@ function calculateDashboard() {
 // ==========================================
 // ESTOQUE
 // ==========================================
+
+// Retorna as cores com grade (migra produtos antigos: 1 cor "Padrão" com os tamanhos do produto)
+function coresComGrade(p) {
+  if (p && Array.isArray(p.cores) && p.cores.length) {
+    return p.cores.map(c => ({
+      nome: c.nome || 'Padrão', hex: c.hex || '#888',
+      grade: Array.isArray(c.grade) ? c.grade : []
+    }));
+  }
+  const sizes = (p && p.sizes && p.sizes.length) ? p.sizes : ['U'];
+  const stock = parseInt(p && p.stock) || 0;
+  return [{ nome: 'Padrão', hex: '#888', grade: sizes.map((t, i) => ({ tamanho: t, estoque: i === 0 ? stock : 0 })) }];
+}
+
+// Badge de estoque (verde/amarelo/vermelho) + nº de cores, pra tabela de produtos
+function stockBadge(p) {
+  const n = parseInt(p.stock) || 0;
+  const nCores = (Array.isArray(p.cores) && p.cores.length) ? p.cores.length : 1;
+  const cls = n <= 0 ? 'sb-zero' : (n <= 3 ? 'sb-low' : 'sb-ok');
+  const label = n <= 0 ? 'Esgotado' : `${n} un.`;
+  return `<span class="stock-badge ${cls}">${label}</span><br><small style="color:var(--text2)">${nCores} ${nCores > 1 ? 'cores' : 'cor'}</small>`;
+}
+
 function renderEstoque() {
   const grid = document.getElementById('stockGrid');
-  if(!grid) return;
+  if (!grid) return;
+  const LOW = 3;
 
-  grid.innerHTML = products.length === 0
-    ? '<p style="color:var(--text2);">Nenhum produto cadastrado.</p>'
-    : products.map(p => `
-      <div class="stock-card">
-        <div class="stock-card-name">${p.name}</div>
-        <div class="stock-card-qty ${p.stock<=3?'low':''}">${p.stock}</div>
-      </div>
-    `).join('');
-  
+  if (products.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text2);">Nenhum produto cadastrado.</p>';
+  } else {
+    // Resumo geral (peças, valor investido, variações acabando/esgotadas)
+    let esgotadas = 0, baixas = 0, valorTotal = 0, pecasTotal = 0;
+    products.forEach(p => {
+      coresComGrade(p).forEach(c => (c.grade || []).forEach(s => {
+        const e = parseInt(s.estoque) || 0;
+        pecasTotal += e;
+        valorTotal += e * (parseFloat(p.cost) || 0);
+        if (e <= 0) esgotadas++; else if (e <= LOW) baixas++;
+      }));
+    });
+
+    const resumo = `
+      <div class="stock-summary">
+        <div class="stock-sum-card"><div class="ssc-label">Peças no estoque</div><div class="ssc-value">${pecasTotal}</div></div>
+        <div class="stock-sum-card"><div class="ssc-label">Valor investido (custo)</div><div class="ssc-value">R$ ${valorTotal.toFixed(2).replace('.', ',')}</div></div>
+        <div class="stock-sum-card ${baixas ? 'warn' : ''}"><div class="ssc-label">Variações acabando</div><div class="ssc-value">${baixas}</div></div>
+        <div class="stock-sum-card ${esgotadas ? 'danger' : ''}"><div class="ssc-label">Variações esgotadas</div><div class="ssc-value">${esgotadas}</div></div>
+      </div>`;
+
+    const cards = products.map(p => {
+      const cores = coresComGrade(p);
+      const totalP = cores.reduce((n, c) => n + (c.grade || []).reduce((m, s) => m + (parseInt(s.estoque) || 0), 0), 0);
+      const coresHtml = cores.map(c => {
+        const grade = (c.grade && c.grade.length) ? c.grade : [{ tamanho: '—', estoque: 0 }];
+        const chips = grade.map(s => {
+          const e = parseInt(s.estoque) || 0;
+          const cls = e <= 0 ? 'zero' : (e <= LOW ? 'low' : 'ok');
+          return `<span class="var-chip ${cls}"><b>${s.tamanho}</b> ${e}</span>`;
+        }).join('');
+        return `<div class="stock-cor-row"><span class="stock-cor-dot" style="background:${c.hex}"></span><span class="stock-cor-name">${c.nome}</span><div class="var-chips">${chips}</div></div>`;
+      }).join('');
+      return `
+        <div class="stock-card-v2 ${totalP <= 0 ? 'is-zero' : (totalP <= LOW ? 'is-low' : '')}">
+          <div class="stock-card-head">
+            <span class="stock-card-name">${p.name}</span>
+            <span class="stock-card-total">${totalP} un.</span>
+          </div>
+          ${coresHtml}
+        </div>`;
+    }).join('');
+
+    grid.innerHTML = resumo + cards;
+  }
+
   const sLog = document.getElementById('stockLog');
-  if(sLog) sLog.innerHTML = stockLog.length === 0
+  if (sLog) sLog.innerHTML = stockLog.length === 0
     ? '<tr><td colspan="5" style="text-align:center">Sem registros.</td></tr>'
-    : stockLog.slice(0,10).map(l => `<tr><td>${l.date}</td><td>${l.product}</td><td><span class="status-badge pago">${l.type}</span></td><td>${l.qty}</td><td>${l.user}</td></tr>`).join('');
+    : stockLog.slice(0, 10).map(l => `<tr><td>${l.date}</td><td>${l.product}</td><td><span class="status-badge pago">${l.type}</span></td><td>${l.qty}</td><td>${l.user}</td></tr>`).join('');
 }
 
 function openStockEntry() {
