@@ -68,15 +68,6 @@ let cartShippingValue = 0;
 let cartTotalValue = 0;
 let selectedShippingName = "";
 
-const instaImgs = [
-  "https://images.unsplash.com/photo-1536766768598-e09213fdcf22?w=400&q=80",
-  "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=80",
-  "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80",
-  "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80",
-  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
-  "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=400&q=80",
-];
-
 // ==========================================
 // HELPERS DE PREÇO E CONVERSÃO
 // ==========================================
@@ -100,6 +91,7 @@ db.collection("products")
     onlineProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderFilters(); // <--- ETAPA 2: CHAMA A CRIAÇÃO DOS BOTÕES
     renderProducts(onlineProducts);
+    renderInsta(); // Galeria usa as fotos dos produtos — atualiza quando eles chegam
 });
 
 // ==========================================
@@ -643,13 +635,60 @@ async function confirmOnlinePurchase() {
 // ==========================================
 // UTILIDADES E COMPONENTES VISUAIS
 // ==========================================
+// Monta os itens da galeria a partir das FOTOS DOS PRODUTOS (até 2 por produto),
+// embaralhadas pra não ficar igual ao grid de cima. Cada item abre o produto.
+function instaGalleryItems() {
+  const pool = [];
+  onlineProducts.forEach(p => {
+    const imgs = [];
+    getProductColors(p).forEach(c => (c.imagens || []).forEach(u => imgs.push(u)));
+    if (!imgs.length && p.img) imgs.push(p.img);
+    imgs.slice(0, 2).forEach(u => pool.push({ img: u, id: p.id, name: p.name || '' }));
+  });
+  // Remove fotos repetidas
+  const seen = new Set();
+  const uniq = pool.filter(it => { if (seen.has(it.img)) return false; seen.add(it.img); return true; });
+  // Embaralha (Fisher–Yates)
+  for (let i = uniq.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [uniq[i], uniq[j]] = [uniq[j], uniq[i]];
+  }
+  return uniq.slice(0, 12);
+}
+
 function renderInsta() {
-  document.getElementById('instaGrid').innerHTML = instaImgs.map(src => `
-    <a href="https://www.instagram.com/brugnera_store" target="_blank" rel="noopener noreferrer" class="insta-item">
-      <img src="${src}" loading="lazy">
-      <div class="insta-overlay">📸</div>
-    </a>
-  `).join('');
+  const grid = document.getElementById('instaGrid');
+  if (!grid) return;
+  grid.classList.add('is-carousel');
+  const items = instaGalleryItems();
+
+  // Sem fotos de produto ainda? Mostra um esqueleto (nunca fotos aleatórias).
+  if (!items.length) {
+    grid.innerHTML = `<div class="insta-track" id="instaTrack">${Array.from({ length: 6 }).map(() => `<div class="insta-item insta-skel"></div>`).join('')}</div>`;
+    return;
+  }
+
+  const cards = items.map(it => {
+    const safeName = String(it.name).replace(/"/g, '&quot;');
+    return `
+    <button type="button" class="insta-item" onclick="openProductModal('${it.id}')" aria-label="Ver ${safeName}">
+      <img src="${it.img}" loading="lazy" alt="${safeName}">
+      <div class="insta-overlay"><span>Ver produto</span></div>
+    </button>`;
+  }).join('');
+
+  grid.innerHTML = `
+    <button type="button" class="insta-nav insta-prev" onclick="instaScroll(-1)" aria-label="Fotos anteriores">‹</button>
+    <div class="insta-track" id="instaTrack">${cards}</div>
+    <button type="button" class="insta-nav insta-next" onclick="instaScroll(1)" aria-label="Próximas fotos">›</button>`;
+}
+
+function instaScroll(dir) {
+  const track = document.getElementById('instaTrack');
+  if (!track) return;
+  const card = track.querySelector('.insta-item');
+  const step = card ? (card.offsetWidth + 12) * 2 : 320; // rola ~2 cards por clique
+  track.scrollBy({ left: dir * step, behavior: 'smooth' });
 }
 
 function renderStrip() {
