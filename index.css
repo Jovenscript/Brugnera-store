@@ -296,3 +296,51 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   border-color: var(--border); background: none; color: var(--gray);
 }
 .size-btn.sold-out:hover { background: none; color: var(--gray); border-color: var(--border); }
+
+/* ===== GALERIA EM CARROSSEL (fotos dos produtos) ===== */
+.insta-grid.is-carousel { display: block; position: relative; }
+.insta-track {
+  display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth;
+  scroll-snap-type: x mandatory; padding: 4px 2px;
+  -ms-overflow-style: none; scrollbar-width: none;
+}
+.insta-track::-webkit-scrollbar { display: none; }
+.is-carousel .insta-item {
+  flex: 0 0 230px; aspect-ratio: 4/5; scroll-snap-align: start;
+  border-radius: 14px; border: none; background: #111; padding: 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+}
+.is-carousel .insta-item img { border-radius: 14px; }
+.insta-overlay span {
+  background: linear-gradient(160deg,#fbfcfd,#c8ccd0); color: #1c1c1c;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 8px 16px; border-radius: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+/* Setas de navegação — prata metálico */
+.insta-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; line-height: 1; color: #1c1c1c;
+  background: linear-gradient(160deg,#ffffff,#cdd2d7); border: 1px solid rgba(255,255,255,0.6);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.insta-nav:hover { transform: translateY(-50%) scale(1.08); box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+.insta-nav:active { transform: translateY(-50%) scale(0.96); }
+.insta-prev { left: -8px; }
+.insta-next { right: -8px; }
+
+/* Esqueleto enquanto as fotos dos produtos carregam */
+.insta-skel {
+  flex: 0 0 230px; aspect-ratio: 4/5; border-radius: 14px;
+  background: linear-gradient(100deg,#161616 30%,#222 50%,#161616 70%);
+  background-size: 200% 100%; animation: instaShimmer 1.3s infinite;
+}
+@keyframes instaShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+@media (max-width: 768px) {
+  .is-carousel .insta-item, .insta-skel { flex-basis: 64vw; }
+  .insta-prev { left: 2px; } .insta-next { right: 2px; }
+}
