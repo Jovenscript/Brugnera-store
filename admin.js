@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v8 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v9 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -661,6 +661,30 @@ function closeProdModal() { document.getElementById('prodModal').classList.remov
 
 function activateDraft(id) { openProductForm(id, true); }
 
+// Migra fotos antigas em base64 (produtos criados antes do Storage) para URLs do Storage.
+// Assim o documento nunca estoura o limite de 1 MB do Firestore.
+async function migrarFotosBase64(cores) {
+  const storage = firebase.storage();
+  for (const c of cores) {
+    const novas = [];
+    for (const url of (c.imagens || [])) {
+      if (typeof url === 'string' && url.startsWith('data:')) {
+        console.log('♻️ Migrando foto base64 antiga para o Storage...');
+        const blob = await (await fetch(url)).blob();
+        const filename = 'migrada_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9) + '.jpg';
+        const ref = storage.ref('product-images/' + filename);
+        await ref.put(blob, { contentType: blob.type || 'image/jpeg' });
+        const novaUrl = await ref.getDownloadURL();
+        console.log('✅ Foto migrada:', novaUrl);
+        novas.push(novaUrl);
+      } else if (url) {
+        novas.push(url);
+      }
+    }
+    c.imagens = novas;
+  }
+}
+
 async function saveProduct() {
   // Trava: não deixa salvar enquanto fotos ainda estão subindo
   if (uploadsPending > 0) {
@@ -715,6 +739,19 @@ async function saveProduct() {
   if (price > 0 && cost > 0 && price < cost &&
       !confirm("⚠️ O preço de VENDA está menor que o CUSTO — isso dá prejuízo. Deseja continuar mesmo assim?")) {
     return;
+  }
+
+  // Migra fotos antigas em base64 pra URLs do Storage ANTES de montar o documento.
+  // (É isso que evita o erro de "1 MB" — base64 é gigante, URL é minúscula.)
+  const btnSalvar = document.getElementById('btnSalvarProd');
+  try {
+    btnSalvar.textContent = 'Salvando...';
+    btnSalvar.disabled = true;
+    await migrarFotosBase64(cores);
+  } catch (e) {
+    btnSalvar.textContent = 'Salvar Produto';
+    btnSalvar.disabled = false;
+    return alert('Não consegui enviar uma foto antiga pro Storage: ' + (e.message || e) + '\n\nReabra o produto e adicione a foto novamente.');
   }
 
   // A capa do produto = 1ª foto da 1ª cor. NÃO duplicamos o resto das fotos em 'images'
@@ -772,6 +809,7 @@ async function saveProduct() {
     }
   } finally {
     document.getElementById('btnSalvarProd').textContent = "Salvar Produto";
+    document.getElementById('btnSalvarProd').disabled = false;
   }
 }
 
