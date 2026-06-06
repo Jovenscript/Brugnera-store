@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-<link rel="stylesheet" href="index.css?v=2">
+<link rel="stylesheet" href="index.css?v=3">
 </head>
 <body>
 
@@ -173,7 +173,7 @@
       <div class="cart-total-row"><span>Frete</span><span style="color:#4caf50">Calcular no checkout</span></div>
       <div class="cart-total-row main"><span>Total</span><span id="cartTotal">R$ 0,00</span></div>
       <button class="btn-checkout" onclick="openCheckoutModal()">Finalizar Compra</button>
-      <p class="pix-note">🔒 Pix com 5% de desconto · 12× sem juros no cartão</p>
+      <p class="pix-note">🔒 Compra 100% segura · parcele no cartão</p>
     </div>
   </div>
 </div>
@@ -243,7 +243,7 @@
     <div class="checkout-form-section">
       <h4>Pagamento</h4>
       <select id="clientPayment" class="chk-input" onchange="atualizarTotalCheckout()">
-        <option value="Pix">Pix (5% Desconto)</option>
+        <option value="Pix">Pix</option>
         <option value="Cartão">Cartão de Crédito</option>
       </select>
     </div>
@@ -261,6 +261,6 @@
 
 <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
-<script src="index.js?v=2"></script>
+<script src="index.js?v=3"></script>
 </body>
 </html>
