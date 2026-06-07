@@ -316,8 +316,6 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
   padding: 8px 16px; border-radius: 22px; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
 }
-
-/* Setas de navegação — prata metálico */
 .insta-nav {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
   width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
@@ -331,15 +329,12 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .insta-nav:active { transform: translateY(-50%) scale(0.96); }
 .insta-prev { left: -8px; }
 .insta-next { right: -8px; }
-
-/* Esqueleto enquanto as fotos dos produtos carregam */
 .insta-skel {
   flex: 0 0 230px; aspect-ratio: 4/5; border-radius: 14px;
   background: linear-gradient(100deg,#161616 30%,#222 50%,#161616 70%);
   background-size: 200% 100%; animation: instaShimmer 1.3s infinite;
 }
 @keyframes instaShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
 @media (max-width: 768px) {
   .is-carousel .insta-item, .insta-skel { flex-basis: 64vw; }
   .insta-prev { left: 2px; } .insta-next { right: 2px; }
