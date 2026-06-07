@@ -135,7 +135,6 @@ function renderProducts(list) {
   grid.innerHTML = inStockList.map(p => {
     const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
     const disc = calcDiscount(p);
-    const pix = fmt(p.price * 0.95);
     const cores = getProductColors(p);
     const dotsHtml = cores.length > 1
       ? `<div class="card-colors">${cores.slice(0,5).map(c => `<span class="card-color-dot" style="background:${c.hex || '#ccc'}" title="${(c.nome||'').replace(/"/g,'&quot;')}"></span>`).join('')}${cores.length > 5 ? `<span class="card-color-more">+${cores.length - 5}</span>` : ''}</div>`
@@ -161,7 +160,6 @@ function renderProducts(list) {
           ${disc > 0 ? `<span class="price-old">R$ ${fmt(p.oldPrice)}</span>` : ''}
           <span class="price-now">R$ ${fmt(p.price)}</span>
         </div>
-        <div class="price-pix">≈ R$ ${pix} à vista no Pix</div>
         <div class="installments">💳 ou em até 3x sem juros</div>
       </div>
     </article>
@@ -203,8 +201,7 @@ function openProductModal(id) {
     priceEl.innerHTML = `R$ ${fmt(p.price)}`;
   }
 
-  const pixPrice = fmt(p.price * 0.95);
-  document.getElementById('modalPix').textContent = `R$ ${pixPrice} no Pix (5% off)`;
+  document.getElementById('modalPix').textContent = '';
   document.getElementById('modalDesc').textContent = p.desc || "Peça exclusiva Brugnera Store.";
 
   // Tamanhos + estoque da COR selecionada (atualiza a mensagem de estoque também)
@@ -230,7 +227,6 @@ function renderModalTrust() {
   }
   trustEl.innerHTML = `
     <span>🔒 <b>Compra segura</b></span>
-    <span>💚 <b>5% OFF</b> no Pix</span>
     <span>📦 Enviamos p/ todo o Brasil</span>
     <span>🔁 Troca facilitada</span>
   `;
@@ -469,9 +465,7 @@ function openCheckoutModal() {
 function atualizarTotalCheckout() {
   let subtotal = cartSubtotalValue;
   const paymentMethod = document.getElementById('clientPayment').value;
-  if(paymentMethod === 'Pix') {
-    subtotal = subtotal * 0.95; 
-  }
+  // Desconto no Pix removido a pedido da loja — Pix agora é preço cheio.
   
   cartTotalValue = subtotal + cartShippingValue;
   
@@ -645,10 +639,8 @@ function instaGalleryItems() {
     if (!imgs.length && p.img) imgs.push(p.img);
     imgs.slice(0, 2).forEach(u => pool.push({ img: u, id: p.id, name: p.name || '' }));
   });
-  // Remove fotos repetidas
   const seen = new Set();
   const uniq = pool.filter(it => { if (seen.has(it.img)) return false; seen.add(it.img); return true; });
-  // Embaralha (Fisher–Yates)
   for (let i = uniq.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [uniq[i], uniq[j]] = [uniq[j], uniq[i]];
@@ -662,7 +654,6 @@ function renderInsta() {
   grid.classList.add('is-carousel');
   const items = instaGalleryItems();
 
-  // Sem fotos de produto ainda? Mostra um esqueleto (nunca fotos aleatórias).
   if (!items.length) {
     grid.innerHTML = `<div class="insta-track" id="instaTrack">${Array.from({ length: 6 }).map(() => `<div class="insta-item insta-skel"></div>`).join('')}</div>`;
     return;
@@ -687,12 +678,12 @@ function instaScroll(dir) {
   const track = document.getElementById('instaTrack');
   if (!track) return;
   const card = track.querySelector('.insta-item');
-  const step = card ? (card.offsetWidth + 12) * 2 : 320; // rola ~2 cards por clique
+  const step = card ? (card.offsetWidth + 12) * 2 : 320;
   track.scrollBy({ left: dir * step, behavior: 'smooth' });
 }
 
 function renderStrip() {
-  const msgs = ['Frete para todo o Brasil','Pix com 5% de desconto','12x sem juros no cartão','Envio em até 24h','Nova Coleção Disponível'];
+  const msgs = ['Frete para todo o Brasil','12x sem juros no cartão','Envio em até 24h','Nova Coleção Disponível'];
   const full = [...msgs,...msgs].map(m => `<span>${m}</span><span class="dot">✦</span>`).join('');
   document.getElementById('stripInner').innerHTML = full + full;
 }
