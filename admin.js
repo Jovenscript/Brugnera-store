@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v9 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v10 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -965,7 +965,50 @@ function filterOrders(status, btn) {
 }
 
 async function updateOrderStatus(id, status) {
+  const order = orders.find(o => o.id === id);
+
+  // Ao marcar "pago", baixa o estoque das variações (cor+tamanho) — só uma vez por pedido.
+  if (status === 'pago' && order && !order.stockBaixado && Array.isArray(order.itemsDetail) && order.itemsDetail.length) {
+    try {
+      await baixarEstoquePedido(order.itemsDetail);
+      await db.collection("orders").doc(id).update({ status, stockBaixado: true });
+      console.log('✅ Estoque baixado para o pedido', id);
+      return;
+    } catch (e) {
+      console.error(e);
+      alert('⚠️ Não consegui baixar o estoque desse pedido:\n' + (e.message || e) + '\n\nO status NÃO foi alterado. Confira o estoque das peças e tente de novo.');
+      renderOrders(); // devolve o seletor ao valor anterior
+      return;
+    }
+  }
+
   await db.collection("orders").doc(id).update({ status });
+}
+
+// Baixa o estoque (cor + tamanho) de cada item do pedido, com transação por produto.
+async function baixarEstoquePedido(itens) {
+  const porProduto = {};
+  itens.forEach(it => { (porProduto[it.id] = porProduto[it.id] || []).push(it); });
+
+  for (const productId of Object.keys(porProduto)) {
+    const ref = db.collection('products').doc(productId);
+    await db.runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      if (!snap.exists) throw new Error('Produto não encontrado (' + productId + ')');
+      const data = snap.data();
+      const cores = Array.isArray(data.cores) ? data.cores : [];
+      porProduto[productId].forEach(it => {
+        const cor = cores.find(c => (c.nome || '') === (it.color || '')) || cores[0];
+        if (!cor) throw new Error('Cor não encontrada em "' + (data.name || productId) + '"');
+        if (!Array.isArray(cor.grade)) cor.grade = [];
+        const g = cor.grade.find(s => (s.tamanho || '') === (it.size || ''));
+        if (!g) throw new Error('Tamanho ' + it.size + ' não encontrado em "' + (data.name || productId) + '"');
+        g.estoque = Math.max(0, (parseInt(g.estoque) || 0) - (parseInt(it.qty) || 0));
+      });
+      const total = cores.reduce((n, c) => n + (Array.isArray(c.grade) ? c.grade.reduce((m, s) => m + (parseInt(s.estoque) || 0), 0) : 0), 0);
+      t.update(ref, { cores: cores, stock: total });
+    });
+  }
 }
 
 function calculateDashboard() {
