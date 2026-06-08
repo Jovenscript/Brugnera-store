@@ -66,6 +66,21 @@ function getVariantStock(p, colorName, size) {
 let cartSubtotalValue = 0;
 let cartShippingValue = 0;
 let cartTotalValue = 0;
+
+// ===== PIX (copia-e-cola / QR estático com valor) =====
+const STORE_WA = '5547966296688';
+const PIX_DADOS = { chave: '29bf1696-b20c-4ea2-8a6a-cf50ca024fed', nome: 'Claudiane Brugnera dos Santos', cidade: 'Barra Velha' };
+function pixCrc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++){c=(c&0x8000)?((c<<1)^0x1021):(c<<1);c&=0xFFFF;}}return c.toString(16).toUpperCase().padStart(4,'0');}
+function pixTlv(id,v){return id+v.length.toString().padStart(2,'0')+v;}
+function gerarPixBRCode(valor){
+  const nome = PIX_DADOS.nome.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().slice(0,25);
+  const cidade = PIX_DADOS.cidade.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().slice(0,15);
+  const ma = pixTlv('00','BR.GOV.BCB.PIX') + pixTlv('01', PIX_DADOS.chave);
+  let p = pixTlv('00','01') + pixTlv('01','11') + pixTlv('26', ma) + pixTlv('52','0000') + pixTlv('53','986') + (valor ? pixTlv('54', Number(valor).toFixed(2)) : '') + pixTlv('58','BR') + pixTlv('59', nome) + pixTlv('60', cidade) + pixTlv('62', pixTlv('05','***'));
+  p += '6304';
+  return p + pixCrc16(p);
+}
+let pixCopiaAtual = '';
 let selectedShippingName = "";
 
 // ==========================================
@@ -575,11 +590,13 @@ async function confirmOnlinePurchase() {
 
   let totalCost = 0;
   let itemsArray = [];
+  let itemsDetail = [];
 
   for(let item of cart) {
     const p = onlineProducts.find(x => x.id === item.id);
     if(p) totalCost += (p.cost || 0) * item.qty;
     itemsArray.push(`${item.qty}x ${item.name}${item.color ? ' - ' + item.color : ''} (Tam: ${item.size})`);
+    itemsDetail.push({ id: item.id, name: item.name, color: item.color || '', size: item.size, qty: item.qty, price: item.price });
   }
 
   const orderData = {
@@ -590,6 +607,7 @@ async function confirmOnlinePurchase() {
     shippingMethod: selectedShippingName,
     shippingCost: cartShippingValue,
     items: itemsArray.join(', '),
+    itemsDetail: itemsDetail,
     value: cartTotalValue,
     cost: totalCost,
     payment: payment,
@@ -599,8 +617,9 @@ async function confirmOnlinePurchase() {
   };
 
   try {
-    await db.collection("orders").add(orderData);
-    
+    const ref = await db.collection("orders").add(orderData);
+    const orderId = ref.id;
+
     for(let item of cart) {
       // Operação atômica: evita venda dupla quando 2 clientes compram ao mesmo tempo
       await db.collection("products").doc(item.id).update({
@@ -608,22 +627,57 @@ async function confirmOnlinePurchase() {
       });
     }
 
+    // Resumo pro WhatsApp (montado antes de limpar o carrinho)
+    const resumoItens = itemsArray.join(', ');
+    const totalPix = cartTotalValue;
+
     document.getElementById('checkoutModal').style.display = 'none';
     document.getElementById('clientName').value = '';
     document.getElementById('clientPhone').value = '';
     document.getElementById('clientCEP').value = '';
     document.getElementById('addressFields').style.display = 'none';
     document.getElementById('shippingSection').style.display = 'none';
-    
+
     cart = [];
     saveCart();
-    toggleCart(); 
-    
-    showToast("Pedido realizado com sucesso! Nossa equipe chamará no WhatsApp.");
+    if (document.getElementById('cartOverlay').classList.contains('open')) toggleCart();
+
+    // PIX abre a tela com QR Code; outras formas (cartão) levam ao WhatsApp pra combinar
+    if (payment === 'Pix') {
+      abrirPix(orderId, totalPix, name, resumoItens, fullAddress, selectedShippingName);
+    } else {
+      const num = orderId.slice(-6).toUpperCase();
+      const msg = `Olá! Fiz um pedido no site 💛\n\n*Pedido:* #${num}\n*Cliente:* ${name}\n*Itens:* ${resumoItens}\n*Entrega:* ${selectedShippingName}\n*Endereço:* ${fullAddress}\n*Total:* R$ ${fmt(totalPix)}\n*Pagamento:* ${payment}\n\nQuero combinar o pagamento. 😊`;
+      window.open(`https://wa.me/${STORE_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+      showToast("Pedido registrado! Te levamos pro WhatsApp pra combinar o pagamento.");
+    }
 
   } catch(e) {
-    alert("Erro ao processar compra: " + e.message);
+    console.error(e);
+    showToast("Algo deu errado ao finalizar. Tente de novo ou fale com a gente no WhatsApp.");
   }
+}
+
+// Abre a tela de pagamento PIX com QR Code, copia-e-cola e botão de comprovante no WhatsApp
+function abrirPix(orderId, valor, cliente, resumoItens, endereco, frete){
+  const num = orderId.slice(-6).toUpperCase();
+  pixCopiaAtual = gerarPixBRCode(valor);
+  document.getElementById('pixOrderId').textContent = '#' + num;
+  document.getElementById('pixValor').textContent = fmt(valor);
+  document.getElementById('pixCopia').textContent = pixCopiaAtual;
+  const box = document.getElementById('pixQr');
+  box.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(box, { text: pixCopiaAtual, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  }
+  const msg = `Olá! Fiz um pedido no site 💛\n\n*Pedido:* #${num}\n*Cliente:* ${cliente}\n*Itens:* ${resumoItens}\n*Entrega:* ${frete}\n*Endereço:* ${endereco}\n*Total:* R$ ${fmt(valor)}\n\nJá fiz o PIX — segue o comprovante:`;
+  document.getElementById('pixWhatsBtn').href = `https://wa.me/${STORE_WA}?text=${encodeURIComponent(msg)}`;
+  document.getElementById('pixModal').style.display = 'flex';
+}
+
+function copiarPix(){
+  if(!pixCopiaAtual) return;
+  navigator.clipboard.writeText(pixCopiaAtual).then(()=> showToast('Código PIX copiado!')).catch(()=> showToast('Copie o código manualmente.'));
 }
 
 // ==========================================
