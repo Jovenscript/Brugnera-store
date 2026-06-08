@@ -620,12 +620,8 @@ async function confirmOnlinePurchase() {
     const ref = await db.collection("orders").add(orderData);
     const orderId = ref.id;
 
-    for(let item of cart) {
-      // Operação atômica: evita venda dupla quando 2 clientes compram ao mesmo tempo
-      await db.collection("products").doc(item.id).update({
-        stock: firebase.firestore.FieldValue.increment(-item.qty)
-      });
-    }
+    // O estoque NÃO baixa aqui. Ele baixa quando a loja marcar o pedido como "pago" no admin
+    // (pagamento é manual via PIX). Isso evita reservar estoque de pedido que não foi pago.
 
     // Resumo pro WhatsApp (montado antes de limpar o carrinho)
     const resumoItens = itemsArray.join(', ');
