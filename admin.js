@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v10 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v11 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -572,6 +572,7 @@ function renderProdTable() {
       <td><span class="status-badge pago">Ativo</span></td>
       <td style="display:flex;gap:6px;padding:14px 16px">
         <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">Editar</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirEtiquetas('${p.id}')">🏷️ Etiquetas</button>
         <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Excluir</button>
       </td>
     </tr>
@@ -1033,6 +1034,48 @@ function calculateDashboard() {
 // ==========================================
 // ESTOQUE
 // ==========================================
+
+// SKU determinístico da variação (MESMO esquema será usado no leitor do PDV — Parte 2)
+function skuVariacao(productId, color, size){
+  const base = (productId + '|' + (color||'') + '|' + (size||'')).toUpperCase();
+  let h = 0;
+  for (let i=0;i<base.length;i++){ h = (h*31 + base.charCodeAt(i)) >>> 0; }
+  return 'BRG' + h.toString(36).toUpperCase().padStart(8,'0').slice(-8);
+}
+
+// Abre o gerador de etiquetas (uma por peça em estoque) com preço + código de barras
+function abrirEtiquetas(productId){
+  const p = products.find(x => x.id === productId);
+  if (!p) return alert('Produto não encontrado.');
+  document.getElementById('etqTitulo').textContent = 'Etiquetas — ' + (p.name || '');
+  const area = document.getElementById('etiquetasPrintArea');
+  const cores = coresComGrade(p);
+  const preco = (parseFloat(p.price) || 0).toFixed(2).replace('.', ',');
+
+  let html = '';
+  cores.forEach(c => {
+    (c.grade || []).forEach(s => {
+      const qtd = Math.max(0, parseInt(s.estoque) || 0);
+      const sku = skuVariacao(p.id, c.nome, s.tamanho);
+      for (let i = 0; i < qtd; i++) {
+        html += `<div class="etq-label">
+          <div class="nome">${(p.name || '').toUpperCase()}</div>
+          <div class="var">${c.nome} • Tam ${s.tamanho}</div>
+          <div class="preco">R$ ${preco}</div>
+          <svg class="bc" data-sku="${sku}"></svg>
+          <div style="font-size:9px;color:#666">${sku}</div>
+        </div>`;
+      }
+    });
+  });
+
+  area.innerHTML = html || '<p style="color:#666;">Sem peças em estoque para etiquetar. Cadastre o estoque das variações primeiro.</p>';
+  area.querySelectorAll('svg.bc').forEach(svg => {
+    try { JsBarcode(svg, svg.getAttribute('data-sku'), { format: 'CODE128', width: 1.4, height: 42, fontSize: 11, margin: 4 }); }
+    catch (e) { console.error('Barcode err', e); }
+  });
+  document.getElementById('etiquetasModal').style.display = 'flex';
+}
 
 // Retorna as cores com grade (migra produtos antigos: 1 cor "Padrão" com os tamanhos do produto)
 function coresComGrade(p) {
