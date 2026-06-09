@@ -9,6 +9,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+  #etiquetasModal { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 9998; display: none; align-items: flex-start; justify-content: center; overflow: auto; padding: 24px; }
+  #etiquetasModal .etq-box { background: #fff; color: #000; border-radius: 12px; padding: 20px; max-width: 920px; width: 100%; }
+  .etq-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .etq-head h3 { font-family: 'Playfair Display', serif; color: #1a1a1a; }
+  .etq-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .etq-label { width: 210px; border: 1px dashed #bbb; border-radius: 6px; padding: 10px; text-align: center; background: #fff; color: #000; page-break-inside: avoid; }
+  .etq-label .nome { font-size: 11px; font-weight: 700; line-height: 1.2; }
+  .etq-label .var { font-size: 10px; color: #444; margin: 2px 0; }
+  .etq-label .preco { font-size: 15px; font-weight: 800; }
+  .etq-label svg { max-width: 100%; height: 48px; }
+  .etq-actions { margin-top: 16px; display: flex; gap: 10px; }
+  @media print {
+    body * { visibility: hidden !important; }
+    #etiquetasPrintArea, #etiquetasPrintArea * { visibility: visible !important; }
+    #etiquetasPrintArea { position: absolute; left: 0; top: 0; width: 100%; }
+    .etq-label { border: 1px solid #000; }
+  }
+</style>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -286,7 +306,22 @@
   </div>
 </div>
 
-<script src="admin.js?v=10"></script>
+<div id="etiquetasModal">
+  <div class="etq-box">
+    <div class="etq-head">
+      <h3 id="etqTitulo">Etiquetas</h3>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('etiquetasModal').style.display='none'">✕ Fechar</button>
+    </div>
+    <p style="font-size:.85rem;color:#555;margin-bottom:12px;">Uma etiqueta por peça em estoque (cor + tamanho), com preço e código de barras. Imprima e cole nas peças.</p>
+    <div class="etq-grid" id="etiquetasPrintArea"></div>
+    <div class="etq-actions">
+      <button class="btn btn-gold" onclick="window.print()">🖨️ Imprimir etiquetas</button>
+      <button class="btn btn-outline" onclick="document.getElementById('etiquetasModal').style.display='none'">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js?v=11"></script>
 
 </body>
 </html>
