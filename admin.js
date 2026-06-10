@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v11 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v12 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -617,6 +617,10 @@ function openProductForm(id = null, isDraft = false) {
   document.getElementById('fEstoque').value = p?.stock || '';
   document.getElementById('fTamanhos').value = p?.sizes?.join(',') || 'P,M,G';
   document.getElementById('fDesc').value = p?.desc || '';
+  document.getElementById('fPeso').value = p?.peso || '';
+  document.getElementById('fAltura').value = p?.altura || '';
+  document.getElementById('fLargura').value = p?.largura || '';
+  document.getElementById('fComprimento').value = p?.comprimento || '';
   document.getElementById('fChanSite').checked = p ? (p.channelSite !== false) : true;
   document.getElementById('fChanShopee').checked = p ? (p.channelShopee === true) : false;
   
@@ -779,6 +783,10 @@ async function saveProduct() {
     stock: totalStock,
     sizes: allSizes,
     desc: document.getElementById('fDesc').value,
+    peso: parseFloat(document.getElementById('fPeso').value) || 0,
+    altura: parseFloat(document.getElementById('fAltura').value) || 0,
+    largura: parseFloat(document.getElementById('fLargura').value) || 0,
+    comprimento: parseFloat(document.getElementById('fComprimento').value) || 0,
     cores: cores,
     images: cover ? [cover] : [],
     img: cover,
