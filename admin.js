@@ -1,4 +1,4 @@
-console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v12 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
+console.log('%c🚀 ADMIN.JS DIAGNÓSTICO v13 CARREGADO — ' + new Date().toLocaleTimeString(), 'color:#0a0;font-size:16px;font-weight:bold');
 
 // ==========================================
 // CONFIGURAÇÃO DO FIREBASE
@@ -949,13 +949,14 @@ function renderOrders() {
       <td style="font-size:0.75rem; color:var(--text2)">${o.items}</td>
       <td style="color:var(--gold)">R$ ${(o.value||0).toFixed(2).replace('.',',')}</td>
       <td>${o.payment}</td>
-      <td><span class="status-badge ${o.status==='pago'?'pago':(o.status==='pendente'?'pendente':'enviado')}">${o.status}</span></td>
+      <td><span class="status-badge ${o.status==='pago'?'pago':(o.status==='pendente'?'pendente':(o.status==='enviado'||o.status==='entregue'?'enviado':'pendente'))}" style="${o.status==='cancelado'?'opacity:.55;text-decoration:line-through':''}">${o.status}</span></td>
       <td>
         <select onchange="updateOrderStatus('${o.id}', this.value)" style="padding:4px;background:var(--surface2);border:1px solid var(--border);color:white;font-size:0.7rem">
           <option value="pendente" ${o.status==='pendente'?'selected':''}>Pendente</option>
           <option value="pago" ${o.status==='pago'?'selected':''}>Pago</option>
           <option value="enviado" ${o.status==='enviado'?'selected':''}>Enviado</option>
           <option value="entregue" ${o.status==='entregue'?'selected':''}>Entregue</option>
+          <option value="cancelado" ${o.status==='cancelado'?'selected':''}>Cancelado</option>
         </select>
       </td>
     </tr>
@@ -991,7 +992,49 @@ async function updateOrderStatus(id, status) {
     }
   }
 
+  // Ao CANCELAR um pedido que já teve baixa de estoque, devolve as peças ao estoque.
+  if (status === 'cancelado' && order && order.stockBaixado && Array.isArray(order.itemsDetail) && order.itemsDetail.length) {
+    if (!confirm('Cancelar este pedido? As peças voltarão para o estoque.')) { renderOrders(); return; }
+    try {
+      await devolverEstoquePedido(order.itemsDetail);
+      await db.collection("orders").doc(id).update({ status, stockBaixado: false });
+      console.log('↩️ Estoque devolvido (pedido cancelado)', id);
+      return;
+    } catch (e) {
+      console.error(e);
+      alert('⚠️ Não consegui devolver o estoque ao cancelar:\n' + (e.message || e) + '\n\nO status NÃO foi alterado.');
+      renderOrders();
+      return;
+    }
+  }
+
   await db.collection("orders").doc(id).update({ status });
+}
+
+// Devolve o estoque (cor + tamanho) de cada item — usado quando um pedido pago é cancelado.
+async function devolverEstoquePedido(itens) {
+  const porProduto = {};
+  itens.forEach(it => { (porProduto[it.id] = porProduto[it.id] || []).push(it); });
+
+  for (const productId of Object.keys(porProduto)) {
+    const ref = db.collection('products').doc(productId);
+    await db.runTransaction(async (t) => {
+      const snap = await t.get(ref);
+      if (!snap.exists) throw new Error('Produto não encontrado (' + productId + ')');
+      const data = snap.data();
+      const cores = Array.isArray(data.cores) ? data.cores : [];
+      porProduto[productId].forEach(it => {
+        const cor = cores.find(c => (c.nome || '') === (it.color || '')) || cores[0];
+        if (!cor) return;
+        if (!Array.isArray(cor.grade)) cor.grade = [];
+        const g = cor.grade.find(s => (s.tamanho || '') === (it.size || ''));
+        if (!g) return;
+        g.estoque = (parseInt(g.estoque) || 0) + (parseInt(it.qty) || 0);
+      });
+      const total = cores.reduce((n, c) => n + (Array.isArray(c.grade) ? c.grade.reduce((m, s) => m + (parseInt(s.estoque) || 0), 0) : 0), 0);
+      t.update(ref, { cores: cores, stock: total });
+    });
+  }
 }
 
 // Baixa o estoque (cor + tamanho) de cada item do pedido, com transação por produto.
@@ -1022,7 +1065,9 @@ async function baixarEstoquePedido(itens) {
 
 function calculateDashboard() {
   let receita = 0; let custoTotal = 0; let vendasSite = 0; let vendasFisica = 0;
+  const confirmados = ['pago', 'enviado', 'entregue']; // só conta o que a Clau confirmou
   orders.forEach(o => {
+    if (!confirmados.includes(o.status)) return; // ignora pendente e cancelado
     receita += (o.value || 0);
     custoTotal += (o.cost || 0);
     if (o.origin === 'Loja Física') vendasFisica++;
