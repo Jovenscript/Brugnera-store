@@ -68,7 +68,7 @@ let cartShippingValue = 0;
 let cartTotalValue = 0;
 
 // ===== PIX (copia-e-cola / QR estático com valor) =====
-const STORE_WA = '+55796629668';
+const STORE_WA = '5547966296688';
 const PIX_DADOS = { chave: '29bf1696-b20c-4ea2-8a6a-cf50ca024fed', nome: 'Claudiane Brugnera dos Santos', cidade: 'Barra Velha' };
 function pixCrc16(s){let c=0xFFFF;for(let i=0;i<s.length;i++){c^=s.charCodeAt(i)<<8;for(let j=0;j<8;j++){c=(c&0x8000)?((c<<1)^0x1021):(c<<1);c&=0xFFFF;}}return c.toString(16).toUpperCase().padStart(4,'0');}
 function pixTlv(id,v){return id+v.length.toString().padStart(2,'0')+v;}
@@ -407,7 +407,7 @@ function addToCartFromModal() {
   } else {
     const cartImg = (cor.imagens && cor.imagens.length) ? cor.imagens[0]
                     : (currentProduct.images && currentProduct.images.length ? currentProduct.images[0] : (currentProduct.img || ''));
-    cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: cartImg, size: selectedSize, color: corNome, qty: 1 });
+    cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, img: cartImg, size: selectedSize, color: corNome, qty: 1, peso: parseFloat(currentProduct.peso) || 0 });
   }
 
   saveCart();
@@ -540,7 +540,9 @@ async function calcularFreteReal(cep) {
   container.innerHTML = '<p style="font-size:0.85rem;color:var(--gray);">📦 Calculando frete...</p>';
 
   try {
-    const resp = await fetch(`${FRETE_API}?cep=${cep}`);
+    // Soma o peso real das peças no carrinho (usa o padrão da função se a peça não tiver peso)
+    const pesoTotal = cart.reduce((s, i) => s + (parseFloat(i.peso) || 0.3) * (i.qty || 1), 0);
+    const resp = await fetch(`${FRETE_API}?cep=${cep}&peso=${pesoTotal.toFixed(3)}`);
     const data = await resp.json();
 
     if (!data.ok || !Array.isArray(data.opcoes) || data.opcoes.length === 0) {
