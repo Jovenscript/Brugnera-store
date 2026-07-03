@@ -569,9 +569,10 @@ function renderProdTable() {
       <td style="color:var(--text2)">R$ ${(p.cost||0).toFixed(2).replace('.',',')}</td>
       <td>R$ ${(p.price||0).toFixed(2).replace('.',',')}</td>
       <td>${stockBadge(p)}</td>
-      <td><span class="status-badge pago">Ativo</span></td>
+      <td>${p.channelSite !== false ? '<span class="status-badge pago">Visível no site</span>' : '<span class="status-badge rascunho">Oculto do site</span>'}</td>
       <td style="display:flex;gap:6px;padding:14px 16px">
         <button class="btn btn-outline btn-sm" onclick="editProduct('${p.id}')">Editar</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleVisibilidadeSite('${p.id}', ${p.channelSite !== false})">${p.channelSite !== false ? '🙈 Ocultar' : '👁 Exibir'}</button>
         <button class="btn btn-outline btn-sm" onclick="abrirEtiquetas('${p.id}')">🏷️ Etiquetas</button>
         <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Excluir</button>
       </td>
@@ -823,6 +824,15 @@ async function saveProduct() {
 }
 
 function editProduct(id) { openProductForm(id, false); }
+
+// Oculta/exibe o produto na vitrine SEM excluir (troca só o campo channelSite)
+async function toggleVisibilidadeSite(id, visivelAgora) {
+  try {
+    await db.collection("products").doc(id).update({ channelSite: !visivelAgora });
+  } catch (e) {
+    alert('Erro ao alterar visibilidade: ' + e.message);
+  }
+}
 
 async function deleteProduct(id) {
   if (confirm("Tem certeza que deseja excluir?")) {

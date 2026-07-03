@@ -54,7 +54,7 @@
   <div class="hero-image" role="img" aria-label="Modelo com peça da coleção"></div>
   <div class="hero-badges" aria-hidden="true">
     <div class="hero-badge"><span>Exclusivo</span><small>Peças selecionadas</small></div>
-    <div class="hero-badge"><span>12×</span><small>sem juros</small></div>
+    <div class="hero-badge"><span>3×</span><small>sem juros</small></div>
     <div class="hero-badge"><span>Brasil</span><small>envio para todo país</small></div>
   </div>
 </section>
@@ -216,17 +216,18 @@
     <div class="checkout-form-section">
       <h4>Endereço de Entrega</h4>
       <div class="form-row-cep">
+        <label for="clientCEP" style="display:block;font-size:0.78rem;font-weight:600;color:var(--gray);margin-bottom:4px;letter-spacing:0.5px;">CEP</label>
         <input type="text" id="clientCEP" placeholder="CEP" class="chk-input" onkeyup="buscarCEP(this.value)" maxlength="9">
         <div id="cepLoader" style="display:none; font-size:0.8rem; color:var(--gray); margin-top:5px;">Buscando CEP...</div>
       </div>
       
       <div id="addressFields" style="display:none; margin-top:10px;">
-        <input type="text" id="clientRua" placeholder="Rua / Avenida" class="chk-input" disabled>
+        <input type="text" id="clientRua" placeholder="Rua / Avenida" class="chk-input">
         <div class="form-row">
           <input type="text" id="clientNum" placeholder="Número" class="chk-input">
           <input type="text" id="clientComp" placeholder="Complemento" class="chk-input">
         </div>
-        <input type="text" id="clientBairro" placeholder="Bairro" class="chk-input" disabled>
+        <input type="text" id="clientBairro" placeholder="Bairro" class="chk-input">
         <div class="form-row">
           <input type="text" id="clientCidade" placeholder="Cidade" class="chk-input" disabled>
           <input type="text" id="clientUF" placeholder="UF" class="chk-input" disabled style="width:70px;">

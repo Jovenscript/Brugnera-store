@@ -107,7 +107,18 @@ db.collection("products")
     renderFilters(); // <--- ETAPA 2: CHAMA A CRIAÇÃO DOS BOTÕES
     renderProducts(onlineProducts);
     renderInsta(); // Galeria usa as fotos dos produtos — atualiza quando eles chegam
+    abrirProdutoDaURL(); // Deep-link: ?produto=ID abre a peça direto
 });
+
+// Abre o produto indicado na URL (link compartilhado) — roda só 1 vez
+let deepLinkAberto = false;
+function abrirProdutoDaURL() {
+  if (deepLinkAberto) return;
+  const id = new URLSearchParams(location.search).get('produto');
+  if (!id) { deepLinkAberto = true; return; }
+  const p = onlineProducts.find(x => x.id === id);
+  if (p) { deepLinkAberto = true; openProductModal(id); }
+}
 
 // ==========================================
 // CATEGORIAS DINÂMICAS (ETAPA 2)
@@ -227,6 +238,23 @@ function openProductModal(id) {
   
   document.getElementById('prodOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  // Link compartilhável: coloca ?produto=ID na URL sem recarregar
+  try { history.replaceState(null, '', `${location.pathname}?produto=${id}`); } catch(e) {}
+}
+
+// Compartilhar produto (Instagram/WhatsApp): usa share nativo ou copia o link
+function compartilharProduto() {
+  if (!currentProduct) return;
+  const url = `${location.origin}${location.pathname}?produto=${currentProduct.id}`;
+  const texto = `${currentProduct.name} — Brugnera Store`;
+  if (navigator.share) {
+    navigator.share({ title: texto, text: texto, url }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('Link copiado! 📋'))
+      .catch(() => showToast('Não foi possível copiar o link.'));
+  }
 }
 
 function renderModalTrust() {
@@ -244,6 +272,7 @@ function renderModalTrust() {
     <span>🔒 <b>Compra segura</b></span>
     <span>📦 Enviamos p/ todo o Brasil</span>
     <span>🔁 Troca facilitada</span>
+    <button type="button" onclick="compartilharProduto()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">🔗 Compartilhar</button>
   `;
 }
 
@@ -381,6 +410,8 @@ function closeProdModal() {
   document.body.style.overflow = '';
   currentProduct = null; 
   selectedSize = null;
+  // Remove ?produto=ID da URL ao fechar
+  try { history.replaceState(null, '', location.pathname); } catch(e) {}
 }
 
 function handleProdClick(e) { if (e.target === document.getElementById('prodOverlay')) closeProdModal(); }
@@ -491,6 +522,9 @@ function atualizarTotalCheckout() {
 
 function buscarCEP(cep) {
   const cepLimpo = cep.replace(/\D/g, '');
+  // Máscara visual 00000-000
+  const campoCep = document.getElementById('clientCEP');
+  if (campoCep) campoCep.value = cepLimpo.length > 5 ? cepLimpo.slice(0,5) + '-' + cepLimpo.slice(5,8) : cepLimpo;
   if (cepLimpo.length === 8) {
     document.getElementById('cepLoader').style.display = 'block';
     
@@ -509,7 +543,9 @@ function buscarCEP(cep) {
           
           document.getElementById('addressFields').style.display = 'block';
           document.getElementById('shippingSection').style.display = 'block';
-          document.getElementById('clientNum').focus();
+          // CEP genérico (cidade sem logradouro): cliente digita a rua manualmente
+          if (!dados.logradouro) document.getElementById('clientRua').focus();
+          else document.getElementById('clientNum').focus();
 
           // Busca o frete REAL no Melhor Envio para este CEP
           calcularFreteReal(cepLimpo);
@@ -529,6 +565,12 @@ function selecionarFrete(valor, nome) {
 }
 
 // Consulta o frete REAL (Cloud Function -> Melhor Envio) e renderiza as opções
+const FRETE_GRATIS_MIN = 150; // Pedidos a partir deste valor têm frete grátis
+
+function subtotalCarrinho() {
+  return cart.reduce((s, i) => s + (parseFloat(i.price) || 0) * (i.qty || 1), 0);
+}
+
 async function calcularFreteReal(cep) {
   const container = document.getElementById('shippingOptions');
   if (!container) return;
@@ -539,6 +581,9 @@ async function calcularFreteReal(cep) {
   atualizarTotalCheckout();
   container.innerHTML = '<p style="font-size:0.85rem;color:var(--gray);">📦 Calculando frete...</p>';
 
+  const subtotal = subtotalCarrinho();
+  const temFreteGratis = subtotal >= FRETE_GRATIS_MIN;
+
   try {
     // Soma o peso real das peças no carrinho (usa o padrão da função se a peça não tiver peso)
     const pesoTotal = cart.reduce((s, i) => s + (parseFloat(i.peso) || 0.3) * (i.qty || 1), 0);
@@ -546,6 +591,7 @@ async function calcularFreteReal(cep) {
     const data = await resp.json();
 
     if (!data.ok || !Array.isArray(data.opcoes) || data.opcoes.length === 0) {
+      if (temFreteGratis) { renderFreteGratis(container, null); return; }
       container.innerHTML = '<p style="font-size:0.85rem;color:var(--rose);">Não conseguimos calcular o frete para este CEP agora. Confira o CEP e tente novamente.</p>';
       return;
     }
@@ -553,7 +599,13 @@ async function calcularFreteReal(cep) {
     // Mais barato primeiro
     const opcoes = data.opcoes.slice().sort((a, b) => a.preco - b.preco);
 
-    container.innerHTML = opcoes.map((o) => {
+    // 🎁 Frete grátis: mostra opção única já selecionada (usa o prazo da opção mais barata)
+    if (temFreteGratis) { renderFreteGratis(container, opcoes[0]); return; }
+
+    const faltam = FRETE_GRATIS_MIN - subtotal;
+    const hintGratis = `<p style="font-size:0.82rem;color:var(--gold);margin-bottom:8px;">💛 Faltam <b>R$ ${faltam.toFixed(2).replace('.', ',')}</b> para ganhar <b>Frete Grátis</b>!</p>`;
+
+    container.innerHTML = hintGratis + opcoes.map((o) => {
       const label = `${o.transportadora} ${o.nome}`.trim();
       const precoFmt = Number(o.preco).toFixed(2).replace('.', ',');
       const labelSafe = label.replace(/'/g, "");
@@ -566,8 +618,22 @@ async function calcularFreteReal(cep) {
       `;
     }).join('');
   } catch (e) {
+    if (temFreteGratis) { renderFreteGratis(container, null); return; }
     container.innerHTML = '<p style="font-size:0.85rem;color:var(--rose);">Erro ao calcular o frete. Verifique sua conexão e tente de novo.</p>';
   }
+}
+
+function renderFreteGratis(container, opcaoBase) {
+  const prazo = opcaoBase ? ` (até ${opcaoBase.prazoDias} dias úteis)` : '';
+  container.innerHTML = `
+    <label class="ship-opt" style="border-color:var(--gold);">
+      <input type="radio" name="shippingOpt" value="Frete Grátis" checked
+             onchange="selecionarFrete(0, 'Frete Grátis')">
+      <span><b>🎁 Frete Grátis</b>${prazo} — <b style="color:var(--gold);">R$ 0,00</b></span>
+    </label>
+    <p style="font-size:0.78rem;color:var(--gray);margin-top:6px;">Você ganhou frete grátis por comprar acima de R$ ${FRETE_GRATIS_MIN.toFixed(2).replace('.', ',')} 💛</p>
+  `;
+  selecionarFrete(0, 'Frete Grátis');
 }
 
 async function confirmOnlinePurchase() {
@@ -735,7 +801,7 @@ function instaScroll(dir) {
 }
 
 function renderStrip() {
-  const msgs = ['Frete para todo o Brasil','12x sem juros no cartão','Envio em até 24h','Nova Coleção Disponível'];
+  const msgs = ['Frete para todo o Brasil','3x sem juros no cartão','Frete Grátis acima de R$ 150','Envio em até 24h','Nova Coleção Disponível'];
   const full = [...msgs,...msgs].map(m => `<span>${m}</span><span class="dot">✦</span>`).join('');
   document.getElementById('stripInner').innerHTML = full + full;
 }
