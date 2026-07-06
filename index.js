@@ -589,8 +589,8 @@ function selecionarFrete(valor, nome) {
 // Consulta o frete REAL (Cloud Function -> Melhor Envio) e renderiza as opções
 // 🏠 Retirada na loja — preencher com endereço/horário da Clau quando ela passar
 const LOJA_RETIRADA = {
-  endereco: "",   // ex: "Rua X, 123 — Centro, Barra Velha/SC"
-  horario: ""     // ex: "Seg a Sáb, 9h às 18h"
+  endereco: "Av. Itajuba, 4054 — Itajuba, Barra Velha/SC",
+  horario: "Seg a Sex, 9h30–12h e 13h–18h30 · Sáb, 9h30–18h30"
 };
 
 // Otimiza URLs do Cloudinary (WebP automático + compressão + largura certa)
