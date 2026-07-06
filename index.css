@@ -51,7 +51,7 @@ nav {
 .hero-btns { display: flex; gap: 16px; flex-wrap: wrap; }
 .btn-primary { background: var(--black); color: var(--white); padding: 15px 36px; border: none; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.8rem; letter-spacing: 0.15em; text-transform: uppercase; transition: all 0.3s; text-decoration: none; display: inline-block; }
 .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
-.hero-image { position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80') center/cover; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); }
+.hero-image { position: absolute; right: 0; top: 0; width: 50%; height: 100%; background: #000 url('banner-hero.webp') center/contain no-repeat; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%); }
 .hero-badges { position: absolute; bottom: 60px; left: 80px; display: flex; gap: 40px; }
 .hero-badge span { display: block; font-size: 1.5rem; font-weight: 700; font-family: 'Playfair Display', serif; }
 .hero-badge small { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray); }
@@ -240,8 +240,9 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   nav { padding: 0 20px; }
   .nav-links, .nav-wpp { display: none; }
   .nav-menu-btn { display: block; }
-  .hero-content { padding: 0 24px; max-width: 100%; }
-  .hero-image { display: none; }
+  .hero { height: auto; min-height: 0; padding-bottom: 32px; }
+  .hero-content { padding: 48px 24px 28px; max-width: 100%; }
+  .hero-image { position: static; width: 100%; aspect-ratio: 1/1; clip-path: none; background-size: cover; }
   .hero h1 { font-size: 2.4rem; }
   .hero-badges { left: 24px; gap: 24px; bottom: 40px; }
   .products-section, .insta-section { padding: 60px 20px; }

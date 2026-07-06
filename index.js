@@ -186,7 +186,7 @@ function renderProducts(list) {
           ${disc > 0 ? `<span class="price-old">R$ ${fmt(p.oldPrice)}</span>` : ''}
           <span class="price-now">R$ ${fmt(p.price)}</span>
         </div>
-        <div class="installments">💳 ou em até 3x sem juros</div>
+        <div class="installments">💳 ou em até 12x no cartão</div>
       </div>
     </article>
   `}).join('');
@@ -565,7 +565,7 @@ function selecionarFrete(valor, nome) {
 }
 
 // Consulta o frete REAL (Cloud Function -> Melhor Envio) e renderiza as opções
-const FRETE_GRATIS_MIN = 150; // Pedidos a partir deste valor têm frete grátis
+const FRETE_GRATIS_MIN = 249; // Pedidos a partir deste valor têm frete grátis (definido pela Clau)
 
 function subtotalCarrinho() {
   return cart.reduce((s, i) => s + (parseFloat(i.price) || 0) * (i.qty || 1), 0);
@@ -801,7 +801,7 @@ function instaScroll(dir) {
 }
 
 function renderStrip() {
-  const msgs = ['Frete para todo o Brasil','3x sem juros no cartão','Frete Grátis acima de R$ 150','Envio em até 24h','Nova Coleção Disponível'];
+  const msgs = ['Frete para todo o Brasil','Parcele em até 12x no cartão','Frete Grátis acima de R$ 249','Envio em até 24h','Nova Coleção Disponível'];
   const full = [...msgs,...msgs].map(m => `<span>${m}</span><span class="dot">✦</span>`).join('');
   document.getElementById('stripInner').innerHTML = full + full;
 }
