@@ -176,7 +176,7 @@ function renderProducts(list) {
     <article class="product-card">
       <div class="product-img-wrap" onclick="openProductModal('${p.id}')">
         ${badges.length ? `<div class="product-badges">${badges.join('')}</div>` : ''}
-        <img src="${mainImg}" alt="${p.name}" loading="lazy">
+        <img src="${cdnImg(mainImg, 600)}" alt="${p.name}" loading="lazy">
         <button class="product-quick-add">Ver peça</button>
       </div>
       <div class="product-info">
@@ -364,7 +364,7 @@ function renderCarousel() {
   const dots = document.getElementById('carouselDots');
   
   container.innerHTML = carouselImagesArray.map((img, index) => `
-    <img src="${img}" class="carousel-img ${index === currentCarouselIndex ? 'active' : ''}">
+    <img src="${cdnImg(img, 900)}" class="carousel-img ${index === currentCarouselIndex ? 'active' : ''}">
   `).join('');
   
   dots.innerHTML = carouselImagesArray.map((_, index) => `
@@ -462,7 +462,7 @@ function updateCartUI() {
   
   container.innerHTML = cart.map((item, idx) => `
     <article class="cart-item">
-      <img class="cart-item-img" src="${item.img}" alt="${item.name}">
+      <img class="cart-item-img" src="${cdnImg(item.img, 200)}" alt="${item.name}">
       <div class="cart-item-info">
         <h4>${item.name}</h4>
         ${item.color ? `<div class="size">Cor: ${item.color}</div>` : ''}
@@ -592,6 +592,13 @@ const LOJA_RETIRADA = {
   endereco: "",   // ex: "Rua X, 123 — Centro, Barra Velha/SC"
   horario: ""     // ex: "Seg a Sáb, 9h às 18h"
 };
+
+// Otimiza URLs do Cloudinary (WebP automático + compressão + largura certa)
+function cdnImg(url, w = 600) {
+  if (!url || typeof url !== 'string' || !url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
+  if (/\/upload\/[a-z]_/.test(url)) return url; // já tem transformação
+  return url.replace('/upload/', `/upload/f_auto,q_auto,w_${w}/`);
+}
 
 const FRETE_GRATIS_MIN = 249; // Pedidos a partir deste valor têm frete grátis (definido pela Clau)
 
@@ -815,7 +822,7 @@ function renderInsta() {
     const safeName = String(it.name).replace(/"/g, '&quot;');
     return `
     <button type="button" class="insta-item" onclick="openProductModal('${it.id}')" aria-label="Ver ${safeName}">
-      <img src="${it.img}" loading="lazy" alt="${safeName}">
+      <img src="${cdnImg(it.img, 500)}" loading="lazy" alt="${safeName}">
       <div class="insta-overlay"><span>Ver produto</span></div>
     </button>`;
   }).join('');

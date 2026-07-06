@@ -47,6 +47,11 @@ let uploadsPending = 0;   // quantas fotos ainda estão subindo pro Storage (tra
 // ==========================================
 // AUTENTICAÇÃO — GUARD DO ADMIN
 // ==========================================
+// Escapa HTML de dados digitados pelo comprador (proteção XSS no painel)
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
 auth.onAuthStateChanged((user) => {
   if (user && ADMIN_EMAILS.includes(user.email)) {
     const guardEl = document.getElementById('authGuard');
@@ -954,11 +959,11 @@ function renderOrders() {
     let icon = o.origin === 'Loja Física' ? '🏬' : (o.origin === 'Shopee' ? '🟧' : '🛍️');
     return `
     <tr>
-      <td style="font-size:1.1rem;" title="${o.origin}">${icon} ${o.origin}</td>
-      <td>${o.client}</td>
-      <td style="font-size:0.75rem; color:var(--text2)">${o.items}</td>
+      <td style="font-size:1.1rem;" title="${esc(o.origin)}">${icon} ${esc(o.origin)}</td>
+      <td>${esc(o.client)}</td>
+      <td style="font-size:0.75rem; color:var(--text2)">${esc(o.items)}</td>
       <td style="color:var(--gold)">R$ ${(o.value||0).toFixed(2).replace('.',',')}</td>
-      <td>${o.payment}</td>
+      <td>${esc(o.payment)}</td>
       <td><span class="status-badge ${o.status==='pago'?'pago':(o.status==='pendente'?'pendente':(o.status==='enviado'||o.status==='entregue'?'enviado':'pendente'))}" style="${o.status==='cancelado'?'opacity:.55;text-decoration:line-through':''}">${o.status}</span></td>
       <td>
         <select onchange="updateOrderStatus('${o.id}', this.value)" style="padding:4px;background:var(--surface2);border:1px solid var(--border);color:white;font-size:0.7rem">
@@ -973,7 +978,7 @@ function renderOrders() {
   `});
   
   if(tbody) tbody.innerHTML = html.join('') || '<tr><td colspan="7" style="text-align:center">Nenhum pedido ainda.</td></tr>';
-  if(recent) recent.innerHTML = orders.slice(0,5).map(o => `<tr><td>${o.origin==='Loja Física'?'🏬':'🛍️'} ${o.origin}</td><td>${o.client}</td><td style="color:var(--gold)">R$ ${(o.value||0).toFixed(2)}</td><td>${o.payment}</td><td><span class="status-badge pago">${o.status}</span></td></tr>`).join('');
+  if(recent) recent.innerHTML = orders.slice(0,5).map(o => `<tr><td>${o.origin==='Loja Física'?'🏬':'🛍️'} ${o.origin}</td><td>${esc(o.client)}</td><td style="color:var(--gold)">R$ ${(o.value||0).toFixed(2)}</td><td>${esc(o.payment)}</td><td><span class="status-badge pago">${o.status}</span></td></tr>`).join('');
   
   const salesChart = document.getElementById('salesChart');
   if(salesChart) salesChart.innerHTML = [0,1,2,3,4,5,6].map(d => `<div class="bar-wrap"><div class="bar" style="height:${Math.floor(Math.random()*60)+20}px"></div></div>`).join('');
