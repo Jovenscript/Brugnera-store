@@ -214,6 +214,21 @@
     </div>
 
     <div class="checkout-form-section">
+      <h4>Como quer receber?</h4>
+      <div id="tipoEntregaOpts" style="display:flex; gap:10px; margin-bottom:6px;">
+        <label class="ship-opt" style="flex:1; margin:0;">
+          <input type="radio" name="tipoEntrega" value="entrega" checked onchange="setTipoEntrega('entrega')">
+          <span>📦 <b>Receber em casa</b></span>
+        </label>
+        <label class="ship-opt" style="flex:1; margin:0;">
+          <input type="radio" name="tipoEntrega" value="retirada" onchange="setTipoEntrega('retirada')">
+          <span>🏠 <b>Retirar na loja</b> — Grátis</span>
+        </label>
+      </div>
+      <div id="retiradaInfo" style="display:none; font-size:0.85rem; color:var(--gray); background:#faf7f2; border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:6px;"></div>
+    </div>
+
+    <div class="checkout-form-section" id="secaoEndereco">
       <h4>Endereço de Entrega</h4>
       <div class="form-row-cep">
         <label for="clientCEP" style="display:block;font-size:0.78rem;font-weight:600;color:var(--gray);margin-bottom:4px;letter-spacing:0.5px;">CEP</label>

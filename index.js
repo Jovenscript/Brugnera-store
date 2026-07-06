@@ -558,6 +558,28 @@ function buscarCEP(cep) {
   }
 }
 
+let tipoEntregaAtual = 'entrega';
+
+function setTipoEntrega(tipo) {
+  tipoEntregaAtual = tipo;
+  const secEnd = document.getElementById('secaoEndereco');
+  const info = document.getElementById('retiradaInfo');
+  if (tipo === 'retirada') {
+    secEnd.style.display = 'none';
+    selecionarFrete(0, 'Retirada na Loja');
+    const lin1 = LOJA_RETIRADA.endereco ? `<b>📍 ${LOJA_RETIRADA.endereco}</b><br>` : '';
+    const lin2 = LOJA_RETIRADA.horario ? `🕐 ${LOJA_RETIRADA.horario}<br>` : '';
+    info.innerHTML = `${lin1}${lin2}Você retira sua peça sem pagar frete. Combinamos os detalhes pelo WhatsApp assim que o pedido for confirmado 💛`;
+    info.style.display = 'block';
+  } else {
+    secEnd.style.display = 'block';
+    info.style.display = 'none';
+    cartShippingValue = 0;
+    selectedShippingName = "";
+    atualizarTotalCheckout();
+  }
+}
+
 function selecionarFrete(valor, nome) {
   cartShippingValue = valor;
   selectedShippingName = nome;
@@ -565,6 +587,12 @@ function selecionarFrete(valor, nome) {
 }
 
 // Consulta o frete REAL (Cloud Function -> Melhor Envio) e renderiza as opções
+// 🏠 Retirada na loja — preencher com endereço/horário da Clau quando ela passar
+const LOJA_RETIRADA = {
+  endereco: "",   // ex: "Rua X, 123 — Centro, Barra Velha/SC"
+  horario: ""     // ex: "Seg a Sáb, 9h às 18h"
+};
+
 const FRETE_GRATIS_MIN = 249; // Pedidos a partir deste valor têm frete grátis (definido pela Clau)
 
 function subtotalCarrinho() {
@@ -645,16 +673,22 @@ async function confirmOnlinePurchase() {
   const num = document.getElementById('clientNum').value;
   
   if(!name || !phone) return showToast("Preencha seu Nome e WhatsApp.");
-  if(!cep || !num) return showToast("Por favor, preencha o CEP e o Número da residência.");
-  if(cartShippingValue === 0) return showToast("Selecione uma opção de Frete.");
+  const ehRetirada = tipoEntregaAtual === 'retirada';
+  if(!ehRetirada && (!cep || !num)) return showToast("Por favor, preencha o CEP e o Número da residência.");
+  if(!selectedShippingName) return showToast("Selecione uma opção de Frete.");
   if(cart.length === 0) return showToast("Carrinho vazio.");
 
-  const rua = document.getElementById('clientRua').value;
-  const comp = document.getElementById('clientComp').value;
-  const bairro = document.getElementById('clientBairro').value;
-  const cidade = document.getElementById('clientCidade').value;
-  const uf = document.getElementById('clientUF').value;
-  const fullAddress = `${rua}, ${num} ${comp ? '('+comp+')' : ''} - ${bairro}, ${cidade}/${uf} - CEP: ${cep}`;
+  let fullAddress;
+  if (ehRetirada) {
+    fullAddress = "🏠 RETIRADA NA LOJA" + (LOJA_RETIRADA.endereco ? ` — ${LOJA_RETIRADA.endereco}` : "");
+  } else {
+    const rua = document.getElementById('clientRua').value;
+    const comp = document.getElementById('clientComp').value;
+    const bairro = document.getElementById('clientBairro').value;
+    const cidade = document.getElementById('clientCidade').value;
+    const uf = document.getElementById('clientUF').value;
+    fullAddress = `${rua}, ${num} ${comp ? '('+comp+')' : ''} - ${bairro}, ${cidade}/${uf} - CEP: ${cep}`;
+  }
 
   let totalCost = 0;
   let itemsArray = [];
