@@ -890,3 +890,59 @@ renderInsta();
 renderStrip();
 startTimer();
 updateCartUI();
+
+
+// ================= PÁGINAS LEGAIS (rodapé) =================
+const LEGAL_TEXTS = {
+  troca: {
+    titulo: "Troca & Devolução",
+    corpo: `
+      <p><b>Arrependimento (compra online):</b> você pode desistir da compra em até <b>7 dias corridos</b> após o recebimento (art. 49 do CDC), com reembolso integral. A peça deve estar sem uso, com etiqueta.</p>
+      <p><b>Troca de tamanho ou cor:</b> solicite em até <b>7 dias</b> após o recebimento pelo nosso WhatsApp. A peça deve estar sem uso, sem lavagem e com etiqueta.</p>
+      <p><b>Defeito de fabricação:</b> comunicando em até <b>30 dias</b>, trocamos a peça ou devolvemos o valor (art. 26 do CDC).</p>
+      <p><b>Como solicitar:</b> chame no WhatsApp com o número do pedido que cuidamos de tudo 💛</p>`
+  },
+  privacidade: {
+    titulo: "Política de Privacidade",
+    corpo: `
+      <p>Coletamos apenas o necessário para processar seu pedido: <b>nome, WhatsApp e endereço de entrega</b>.</p>
+      <p>Seus dados são usados exclusivamente para separação, envio e comunicação sobre o pedido — compartilhados somente com a transportadora responsável pela entrega.</p>
+      <p><b>Não vendemos nem repassamos seus dados</b> a terceiros para publicidade. Tudo é armazenado com segurança na infraestrutura do Google (Firebase).</p>
+      <p>Conforme a <b>LGPD</b>, você pode solicitar a correção ou exclusão dos seus dados a qualquer momento pelo nosso WhatsApp.</p>`
+  },
+  termos: {
+    titulo: "Termos de Uso",
+    corpo: `
+      <p>Preços, promoções e disponibilidade de estoque podem mudar sem aviso prévio. O pedido é confirmado após a aprovação do pagamento.</p>
+      <p>As fotos das peças são ilustrativas — pequenas variações de cor podem ocorrer conforme a tela do dispositivo.</p>
+      <p>Pagamentos parcelados no cartão seguem as condições e eventuais juros da operadora do cartão.</p>
+      <p>Dúvidas? Fale com a gente pelo WhatsApp. Brugnera Store — Barra Velha/SC.</p>`
+  }
+};
+
+function abrirLegal(tipo) {
+  const t = LEGAL_TEXTS[tipo];
+  if (!t) return;
+  let ov = document.getElementById('legalOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'legalOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.innerHTML = '<div id="legalBox" style="background:#fff;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;border-radius:12px;padding:28px;line-height:1.6;font-size:0.92rem;"></div>';
+    ov.addEventListener('click', (e) => { if (e.target === ov) fecharLegal(); });
+    document.body.appendChild(ov);
+  }
+  document.getElementById('legalBox').innerHTML =
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+       <h3 style="margin:0;font-size:1.15rem;">${t.titulo}</h3>
+       <button onclick="fecharLegal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;line-height:1;">×</button>
+     </div>${t.corpo}`;
+  ov.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharLegal() {
+  const ov = document.getElementById('legalOverlay');
+  if (ov) ov.style.display = 'none';
+  document.body.style.overflow = '';
+}
