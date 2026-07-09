@@ -146,7 +146,9 @@ function renderFilters() {
 function renderProducts(list) {
   const grid = document.getElementById('productsGrid');
   
-  const inStockList = list.filter(p => p.stock > 0);
+  const disponiveis = list.filter(p => p.stock > 0);
+  const esgotados = list.filter(p => !(p.stock > 0));
+  const inStockList = [...disponiveis, ...esgotados]; // esgotados no fim, com selo
   
   if (inStockList.length === 0) {
     grid.innerHTML = `
@@ -167,8 +169,9 @@ function renderProducts(list) {
       : '';
 
     // Badges baseados em dados REAIS (oferta, mais vendido, escassez real)
+    const esgotado = !(p.stock > 0);
     const badges = [];
-    if (disc > 0) badges.push(`<span class="badge badge-offer">−${disc}% OFF</span>`);
+    if (disc > 0 && !esgotado) badges.push(`<span class="badge badge-offer">−${disc}% OFF</span>`);
     if (p.bestseller) badges.push(`<span class="badge badge-bestseller">★ Mais vendido</span>`);
     if (p.stock <= 3) badges.push(`<span class="badge badge-last">🔥 Últimas ${p.stock}</span>`);
 
@@ -176,7 +179,7 @@ function renderProducts(list) {
     <article class="product-card">
       <div class="product-img-wrap" onclick="openProductModal('${p.id}')">
         ${badges.length ? `<div class="product-badges">${badges.join('')}</div>` : ''}
-        <img src="${cdnImg(mainImg, 600)}" alt="${p.name}" loading="lazy">
+        <img src="${cdnImg(mainImg, 600)}" alt="${p.name}" loading="lazy">${esgotado ? '<span class="selo-esgotado">ESGOTADO</span>' : ''}
         <button class="product-quick-add">Ver peça</button>
       </div>
       <div class="product-info">
@@ -192,10 +195,30 @@ function renderProducts(list) {
   `}).join('');
 }
 
+let categoriaAtiva = 'all';
+let buscaAtiva = '';
+
 function filterProducts(cat, btn) {
   document.querySelectorAll('#dynamicFilters .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderProducts(cat === 'all' ? onlineProducts : onlineProducts.filter(p => p.category === cat));
+  categoriaAtiva = cat;
+  aplicarFiltrosCatalogo();
+}
+
+function buscarCatalogo(termo) {
+  buscaAtiva = (termo || '').toLowerCase().trim();
+  aplicarFiltrosCatalogo();
+}
+
+function aplicarFiltrosCatalogo() {
+  let lista = categoriaAtiva === 'all' ? onlineProducts : onlineProducts.filter(p => p.category === categoriaAtiva);
+  if (buscaAtiva) {
+    lista = lista.filter(p => {
+      const alvo = [p.name, p.description, p.category, (p.sizes || []).join(' ')].join(' ').toLowerCase();
+      return alvo.includes(buscaAtiva);
+    });
+  }
+  renderProducts(lista);
 }
 
 // ==========================================
@@ -442,8 +465,29 @@ function addToCartFromModal() {
   }
 
   saveCart();
+  const nomeAdicionado = currentProduct.name;
   closeProdModal();
-  showToast(`✓ ${currentProduct.name} adicionado ao carrinho`);
+  mostrarPopupCarrinho(nomeAdicionado);
+}
+
+// ITEM 4 (Clau): após adicionar, oferece continuar ou finalizar
+let popupCarrinhoTimer = null;
+function mostrarPopupCarrinho(nome) {
+  fecharPopupCarrinho();
+  const el = document.createElement('div');
+  el.className = 'added-popup';
+  el.id = 'addedPopup';
+  el.innerHTML = `
+    <span style="font-size:0.88rem;">✓ <b>${nome}</b> no carrinho!</span>
+    <button class="btn-continuar" onclick="fecharPopupCarrinho()">Continuar comprando</button>
+    <button class="btn-finalizar" onclick="fecharPopupCarrinho(); toggleCart();">Finalizar compra</button>`;
+  document.body.appendChild(el);
+  popupCarrinhoTimer = setTimeout(fecharPopupCarrinho, 6000);
+}
+function fecharPopupCarrinho() {
+  if (popupCarrinhoTimer) { clearTimeout(popupCarrinhoTimer); popupCarrinhoTimer = null; }
+  const el = document.getElementById('addedPopup');
+  if (el) el.remove();
 }
 
 function updateCartUI() {

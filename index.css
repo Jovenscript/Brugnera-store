@@ -209,8 +209,24 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .prod-modal-desc { font-size: 0.95rem; color: #555; line-height: 1.8; font-weight: 300; margin-bottom: 32px; }
 .size-label { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 12px; font-weight: 500; }
 .size-options { display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap; }
-.size-btn { width: 48px; height: 48px; border: 1.5px solid var(--border); background: none; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.85rem; transition: all 0.2s; border-radius: 4px;}
+.size-btn { min-width: 48px; width: auto; padding: 0 14px; white-space: nowrap; height: 46px; border: 1.5px solid var(--border); background: none; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.85rem; transition: all 0.2s; border-radius: 4px;}
 .size-btn.active { border-color: var(--black); background: var(--black); color: white; }
+
+/* Busca do catálogo */
+.catalog-search { max-width: 420px; margin: 0 auto 18px; position: relative; }
+.catalog-search input { width: 100%; padding: 12px 42px 12px 16px; border: 1.5px solid var(--border); border-radius: 999px; font-family: 'Jost', sans-serif; font-size: 0.9rem; background: #fff; }
+.catalog-search input:focus { outline: none; border-color: var(--gold); }
+.catalog-search .cs-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--gray); pointer-events: none; }
+
+/* ITEM 7: selo esgotado */
+.product-card.is-esgotado img { filter: grayscale(0.85); opacity: 0.75; }
+.selo-esgotado { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-8deg); background: rgba(0,0,0,0.82); color: #fff; letter-spacing: 3px; font-size: 0.8rem; padding: 8px 18px; border: 1px solid rgba(255,255,255,0.5); pointer-events: none; }
+
+/* ITEM 4: popup pós-carrinho */
+.added-popup { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #111; color: #fff; border-radius: 12px; padding: 16px 18px; z-index: 9998; display: flex; gap: 10px; align-items: center; box-shadow: 0 8px 30px rgba(0,0,0,0.35); max-width: 92vw; }
+.added-popup button { border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-family: 'Jost', sans-serif; font-size: 0.85rem; white-space: nowrap; }
+.btn-continuar { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.45) !important; }
+.btn-finalizar { background: var(--gold); color: #111; font-weight: 600; }
 .stock-msg { font-size: 0.75rem; color: var(--rose); margin-bottom: 24px; }
 
 /* Linha de confiança no modal (trust signals) */
@@ -241,8 +257,17 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   .nav-links, .nav-wpp { display: none; }
   .nav-menu-btn { display: block; }
   .hero { height: auto; min-height: 0; padding-bottom: 32px; }
-  .hero-content { padding: 48px 24px 28px; max-width: 100%; }
-  .hero-image { position: static; width: 100%; aspect-ratio: 1/1; clip-path: none; background-size: cover; }
+  .filters { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+  .filter-btn { flex: 0 0 auto; }
+  .added-popup { flex-wrap: wrap; justify-content: center; }
+  .hero-content { padding: 44px 24px 24px; max-width: 100%; }
+  /* Banner da Clau: largura total, arte inteira visível (sem cortar o texto da imagem) */
+  .hero-image {
+    position: static; width: calc(100% + 48px); margin: 8px -24px 0;
+    aspect-ratio: 1200 / 1254;
+    clip-path: none;
+    background: #000 url('banner-hero.webp') center/cover no-repeat;
+  }
   .hero h1 { font-size: 2.4rem; }
   .hero-badges { left: 24px; gap: 24px; bottom: 40px; }
   .products-section, .insta-section { padding: 60px 20px; }
@@ -263,6 +288,29 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   .hero-badges { display: none; }
   .footer-top { grid-template-columns: 1fr; }
   .checkout-box { width: 95%; padding: 20px; }
+
+  /* ===== Polimento "cara de app" no celular ===== */
+  .hero h1 { font-size: 2.15rem; line-height: 1.08; }
+  .hero p { font-size: 0.95rem; margin-bottom: 28px; }
+  .hero-btns .btn { flex: 1; justify-content: center; text-align: center; }
+
+  /* Alvos de toque mais confortáveis (mín. 44px, padrão de app) */
+  .product-quick-add, .btn, .size-btn, .filter-btn { min-height: 44px; }
+
+  /* WhatsApp flutuante um pouco menor pra não cobrir conteúdo */
+  .wpp-float { bottom: 20px; right: 20px; width: 52px; height: 52px; }
+  .wpp-float svg { width: 26px; height: 26px; }
+
+  /* Grid de produtos: 2 colunas fixas (padrão de app de loja) */
+  .products-section, .insta-section { padding: 44px 16px; }
+  .products-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .product-info h3 { font-size: 0.9rem; }
+  .product-info { padding: 12px 10px; }
+  .installments { font-size: 0.72rem; }
+
+  /* Faixa rotativa mais discreta no mobile */
+  .strip { padding: 11px 0; }
+  .strip-inner span { font-size: 0.66rem; }
 }
 
 /* ===== SELETOR DE COR (variações) ===== */
