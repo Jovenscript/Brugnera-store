@@ -138,6 +138,7 @@ function renderFilters() {
     html += `<button class="filter-btn" onclick="filterProducts('${cat}', this)">${cat}</button>`;
   });
   filtersDiv.innerHTML = html;
+  renderDrawerCats(categories); // Item 8: espelha as categorias no menu lateral (mobile)
 }
 
 // ==========================================
@@ -226,6 +227,26 @@ function pararCarrossel(wrap) {
     const imgEl = wrap.querySelector('img');
     if (imgs[0] && imgEl) imgEl.src = imgs[0]; // volta pra foto principal
   } catch(e) {}
+}
+
+// ===== Item 8: menu de categorias no drawer (mobile) =====
+function renderDrawerCats(categories) {
+  const box = document.getElementById('drawerCats');
+  if (!box) return;
+  if (!categories || categories.length === 0) { box.innerHTML = ''; return; }
+  box.innerHTML = categories.map(cat =>
+    `<button class="drawer-cat-btn" onclick="filtrarPorCategoriaMobile('${String(cat).replace(/'/g, "&#39;")}')">${cat}</button>`
+  ).join('');
+}
+
+// Clicar numa categoria do drawer: fecha menu, filtra vitrine e rola até ela
+function filtrarPorCategoriaMobile(cat) {
+  closeDrawer();
+  const alvo = [...document.querySelectorAll('#dynamicFilters .filter-btn')]
+    .find(b => b.textContent.trim() === cat);
+  if (alvo) alvo.click();
+  else { categoriaAtiva = cat; aplicarFiltrosCatalogo && aplicarFiltrosCatalogo(); }
+  document.getElementById('colecao')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 let categoriaAtiva = 'all';

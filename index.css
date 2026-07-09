@@ -35,7 +35,7 @@ nav {
 .nav-menu-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
 
 /* MOBILE NAV DRAWER */
-.nav-drawer { display: none; position: fixed; top: 68px; left: 0; right: 0; background: rgba(247,242,237,0.98); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); z-index: 99; flex-direction: column; padding: 20px 24px; }
+.nav-drawer { display: none; position: fixed; top: 68px; left: 0; right: 0; background: #f7f2ed; border-bottom: 1px solid var(--border); box-shadow: 0 12px 30px rgba(0,0,0,0.18); z-index: 300; flex-direction: column; padding: 12px 24px 20px; }
 .nav-drawer.open { display: flex; }
 .nav-drawer a { text-decoration: none; color: var(--black); font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .nav-drawer a:last-child { border-bottom: none; }
@@ -394,3 +394,10 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 /* Dica de múltiplas fotos no card (carrossel) */
 .card-car-hint { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.66rem; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 10px; pointer-events: none; opacity: 0.85; }
 .product-img-wrap img { transition: opacity 0.2s ease; }
+
+
+/* Item 8: menu de categorias no drawer mobile */
+.drawer-cats-title { font-size: 0.72rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin: 10px 0 6px; font-weight: 600; }
+.drawer-cats { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.drawer-cat-btn { background: #fff; border: 1px solid var(--border); color: var(--black); padding: 8px 14px; border-radius: 20px; font-size: 0.82rem; font-family: 'Jost', sans-serif; cursor: pointer; text-transform: capitalize; transition: all 0.2s; }
+.drawer-cat-btn:hover, .drawer-cat-btn:active { background: var(--gold); color: #fff; border-color: var(--gold); }
