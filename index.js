@@ -161,7 +161,9 @@ function renderProducts(list) {
   }
 
   grid.innerHTML = inStockList.map(p => {
-    const mainImg = p.images && p.images.length > 0 ? p.images[0] : (p.img || '');
+    const allImgs = (p.images && p.images.length > 0) ? p.images : (p.img ? [p.img] : []);
+    const mainImg = allImgs[0] || '';
+    const temCarrossel = allImgs.length > 1;
     const disc = calcDiscount(p);
     const cores = getProductColors(p);
     const dotsHtml = cores.length > 1
@@ -175,11 +177,19 @@ function renderProducts(list) {
     if (p.bestseller) badges.push(`<span class="badge badge-bestseller">★ Mais vendido</span>`);
     if (p.stock <= 3) badges.push(`<span class="badge badge-last">🔥 Últimas ${p.stock}</span>`);
 
+    // Carrossel leve: guarda todas as imagens em data-attr, alterna no hover/touch
+    const imgsData = temCarrossel ? `data-imgs='${JSON.stringify(allImgs.map(i => cdnImg(i, 600))).replace(/'/g, "&#39;")}'` : '';
+    const carHint = temCarrossel ? `<span class="card-car-hint">${allImgs.length} fotos</span>` : '';
+
     return `
     <article class="product-card">
-      <div class="product-img-wrap" onclick="openProductModal('${p.id}')">
+      <div class="product-img-wrap" onclick="openProductModal('${p.id}')"
+           ${imgsData}
+           onmouseenter="iniciarCarrossel(this)" onmouseleave="pararCarrossel(this)"
+           ontouchstart="iniciarCarrossel(this)">
         ${badges.length ? `<div class="product-badges">${badges.join('')}</div>` : ''}
         <img src="${cdnImg(mainImg, 600)}" alt="${p.name}" loading="lazy">${esgotado ? '<span class="selo-esgotado">ESGOTADO</span>' : ''}
+        ${carHint}
         <button class="product-quick-add">Ver peça</button>
       </div>
       <div class="product-info">
@@ -193,6 +203,29 @@ function renderProducts(list) {
       </div>
     </article>
   `}).join('');
+}
+
+// ===== Carrossel leve nos cards (só roda no card ativo, não pesa a página) =====
+function iniciarCarrossel(wrap) {
+  if (wrap._carTimer) return;
+  let imgs;
+  try { imgs = JSON.parse(wrap.getAttribute('data-imgs') || '[]'); } catch(e) { return; }
+  if (!imgs || imgs.length < 2) return;
+  const imgEl = wrap.querySelector('img');
+  if (!imgEl) return;
+  let i = 0;
+  wrap._carTimer = setInterval(() => {
+    i = (i + 1) % imgs.length;
+    imgEl.src = imgs[i];
+  }, 900);
+}
+function pararCarrossel(wrap) {
+  if (wrap._carTimer) { clearInterval(wrap._carTimer); wrap._carTimer = null; }
+  try {
+    const imgs = JSON.parse(wrap.getAttribute('data-imgs') || '[]');
+    const imgEl = wrap.querySelector('img');
+    if (imgs[0] && imgEl) imgEl.src = imgs[0]; // volta pra foto principal
+  } catch(e) {}
 }
 
 let categoriaAtiva = 'all';

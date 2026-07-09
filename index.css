@@ -256,11 +256,12 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   nav { padding: 0 20px; }
   .nav-links, .nav-wpp { display: none; }
   .nav-menu-btn { display: block; }
-  .hero { height: auto; min-height: 0; padding-bottom: 32px; }
+  .hero { height: auto; min-height: 0; padding-bottom: 32px; display: flex; flex-direction: column; }
+  .hero::before { display: none; }
   .filters { flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
   .filter-btn { flex: 0 0 auto; }
   .added-popup { flex-wrap: wrap; justify-content: center; }
-  .hero-content { padding: 44px 24px 24px; max-width: 100%; }
+  .hero-content { padding: 44px 24px 24px; max-width: 100%; width: 100%; box-sizing: border-box; }
   /* Banner da Clau: largura total, arte inteira visível (sem cortar o texto da imagem) */
   .hero-image {
     position: static; width: calc(100% + 48px); margin: 8px -24px 0;
@@ -388,3 +389,8 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
   .is-carousel .insta-item, .insta-skel { flex-basis: 64vw; }
   .insta-prev { left: 2px; } .insta-next { right: 2px; }
 }
+
+
+/* Dica de múltiplas fotos no card (carrossel) */
+.card-car-hint { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.66rem; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 10px; pointer-events: none; opacity: 0.85; }
+.product-img-wrap img { transition: opacity 0.2s ease; }
