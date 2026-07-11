@@ -401,3 +401,11 @@ footer { background: var(--black); color: white; padding: 80px 60px 40px; }
 .drawer-cats { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .drawer-cat-btn { background: #fff; border: 1px solid var(--border); color: var(--black); padding: 8px 14px; border-radius: 20px; font-size: 0.82rem; font-family: 'Jost', sans-serif; cursor: pointer; text-transform: capitalize; transition: all 0.2s; }
 .drawer-cat-btn:hover, .drawer-cat-btn:active { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+
+/* Barra de departamentos (Roupas/Cosméticos/Acessórios) */
+.grupo-bar { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 auto 16px; }
+.grupo-btn { background: #fff; border: 1.5px solid var(--border); color: var(--black); padding: 10px 20px; border-radius: 999px; font-family: 'Jost', sans-serif; font-size: 0.88rem; letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s; }
+.grupo-btn:hover { border-color: var(--gold); }
+.grupo-btn.active { background: var(--black); color: #fff; border-color: var(--black); }
+@media (max-width: 480px) { .grupo-bar { gap: 7px; } .grupo-btn { padding: 9px 14px; font-size: 0.8rem; } }

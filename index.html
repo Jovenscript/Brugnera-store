@@ -24,7 +24,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<link rel="stylesheet" href="index.css?v=9">
+<link rel="stylesheet" href="index.css?v=10">
 </head>
 <body>
 
@@ -34,7 +34,10 @@
     <div class="nav-logo-text">BRUGNERA<span>Store</span></div>
   </a>
   <ul class="nav-links">
-    <li><a href="#colecao">Coleção</a></li>
+    <li><a href="#colecao" onclick="filtrarGrupo('all')">Coleção</a></li>
+    <li><a href="#colecao" onclick="filtrarGrupo('Roupas')">Roupas</a></li>
+    <li><a href="#colecao" onclick="filtrarGrupo('Cosméticos')">Cosméticos</a></li>
+    <li><a href="#colecao" onclick="filtrarGrupo('Acessórios')">Acessórios</a></li>
     <li><a href="#sale">Sale</a></li>
   </ul>
   <div class="nav-right">
@@ -50,6 +53,12 @@
 
 <nav class="nav-drawer" id="navDrawer" aria-label="Menu mobile">
   <a href="#colecao" onclick="closeDrawer()">Início</a>
+  <div class="drawer-cats-title">Departamentos</div>
+  <div class="drawer-cats">
+    <button class="drawer-cat-btn" onclick="closeDrawer();filtrarGrupo('Roupas')">👗 Roupas</button>
+    <button class="drawer-cat-btn" onclick="closeDrawer();filtrarGrupo('Cosméticos')">💄 Cosméticos</button>
+    <button class="drawer-cat-btn" onclick="closeDrawer();filtrarGrupo('Acessórios')">👜 Acessórios</button>
+  </div>
   <div class="drawer-cats-title">Categorias</div>
   <div id="drawerCats" class="drawer-cats"></div>
   <a href="#sale" onclick="closeDrawer()">🏷️ Ofertas (Sale)</a>
@@ -85,6 +94,12 @@
     <p>Peças selecionadas com foco em elegância e desejo</p>
   </div>
   
+  <div class="grupo-bar" role="group" aria-label="Departamentos">
+    <button class="grupo-btn active" data-g="all" onclick="filtrarGrupo('all')">Tudo</button>
+    <button class="grupo-btn" data-g="Roupas" onclick="filtrarGrupo('Roupas')">👗 Roupas</button>
+    <button class="grupo-btn" data-g="Cosméticos" onclick="filtrarGrupo('Cosméticos')">💄 Cosméticos</button>
+    <button class="grupo-btn" data-g="Acessórios" onclick="filtrarGrupo('Acessórios')">👜 Acessórios</button>
+  </div>
   <div class="catalog-search">
     <input type="text" id="catalogSearch" placeholder="Buscar peça, modelo ou tamanho..." oninput="buscarCatalogo(this.value)" aria-label="Buscar produtos">
     <span class="cs-icon">🔍</span>
@@ -318,6 +333,6 @@
 
 <div class="toast" id="toast" role="alert" aria-live="polite"></div>
 
-<script src="index.js?v=9"></script>
+<script src="index.js?v=10"></script>
 </body>
 </html>

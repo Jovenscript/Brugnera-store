@@ -162,7 +162,10 @@ function renderProducts(list) {
   }
 
   grid.innerHTML = inStockList.map(p => {
-    const allImgs = (p.images && p.images.length > 0) ? p.images : (p.img ? [p.img] : []);
+    // Junta a foto principal + fotos de todas as cores (sem repetir) — é isso que o carrossel mostra
+    const baseImgs = (p.images && p.images.length > 0) ? p.images : (p.img ? [p.img] : []);
+    const coresImgs = getProductColors(p).flatMap(c => c.imagens || []);
+    const allImgs = [...new Set([...baseImgs, ...coresImgs])].slice(0, 5);
     const mainImg = allImgs[0] || '';
     const temCarrossel = allImgs.length > 1;
     const disc = calcDiscount(p);
@@ -249,6 +252,28 @@ function filtrarPorCategoriaMobile(cat) {
   document.getElementById('colecao')?.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ===== Grupos macro da loja (Clau: Roupas / Cosméticos / Acessórios no topo) =====
+let grupoAtivo = 'all';
+const GRUPOS_LOJA = {
+  'Cosméticos': /cosm|maquiag|perfum|batom|skin|beleza|creme|hidrat/i,
+  'Acessórios': /acess|bolsa|brinco|colar|anel|cinto|[óo]cul|pulseira|len[çc]o|chap[ée]u|carteira|rel[óo]gio/i
+};
+function grupoDaCategoria(cat) {
+  cat = String(cat || '');
+  for (const [g, rx] of Object.entries(GRUPOS_LOJA)) if (rx.test(cat)) return g;
+  return 'Roupas';
+}
+function filtrarGrupo(g) {
+  grupoAtivo = g;
+  categoriaAtiva = 'all';
+  buscaAtiva = '';
+  const inp = document.getElementById('catalogSearch');
+  if (inp) inp.value = '';
+  document.querySelectorAll('.grupo-btn').forEach(b => b.classList.toggle('active', b.dataset.g === g));
+  aplicarFiltrosCatalogo();
+  document.getElementById('colecao')?.scrollIntoView({ behavior: 'smooth' });
+}
+
 let categoriaAtiva = 'all';
 let buscaAtiva = '';
 
@@ -266,6 +291,7 @@ function buscarCatalogo(termo) {
 
 function aplicarFiltrosCatalogo() {
   let lista = categoriaAtiva === 'all' ? onlineProducts : onlineProducts.filter(p => p.category === categoriaAtiva);
+  if (grupoAtivo !== 'all') lista = lista.filter(p => grupoDaCategoria(p.category) === grupoAtivo);
   if (buscaAtiva) {
     lista = lista.filter(p => {
       const alvo = [p.name, p.description, p.category, (p.sizes || []).join(' ')].join(' ').toLowerCase();
